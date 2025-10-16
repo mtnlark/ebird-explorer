@@ -35,7 +35,7 @@ const LocationSearch: React.FC<LocationSearchProps> = ({ onSearch, loading }) =>
             type="text"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            placeholder="e.g., 42.3601,-71.0589"
+            placeholder="e.g., Boston MA, 02134, or 42.36,-71.06"
             disabled={loading}
             required
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -44,7 +44,7 @@ const LocationSearch: React.FC<LocationSearchProps> = ({ onSearch, loading }) =>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Format: latitude,longitude (geocoding coming soon!)
+            Enter a town, ZIP code, or coordinates (lat,lng)
           </p>
         </div>
 

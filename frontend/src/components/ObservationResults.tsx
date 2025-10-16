@@ -69,7 +69,16 @@ const ObservationResults: React.FC<ObservationResultsProps> = ({ data }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             <span className="font-medium">Location:</span>
-            <span className="font-mono">{data.location.lat.toFixed(4)}, {data.location.lng.toFixed(4)}</span>
+            {data.location.name ? (
+              <span className="flex-1">
+                {data.location.name}
+                <span className="ml-2 text-xs text-gray-500 font-mono">
+                  ({data.location.lat.toFixed(4)}, {data.location.lng.toFixed(4)})
+                </span>
+              </span>
+            ) : (
+              <span className="font-mono">{data.location.lat.toFixed(4)}, {data.location.lng.toFixed(4)}</span>
+            )}
           </div>
         </div>
       </div>

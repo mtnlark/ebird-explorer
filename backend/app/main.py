@@ -3,10 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 import httpx
 import os
 from dotenv import load_dotenv
+from app.services.geocoding import GeocodingService
 
 load_dotenv()
 
 app = FastAPI(title="eBird Explorer API")
+geocoding_service = GeocodingService()
 
 # Enable CORS for frontend
 app.add_middleware(
@@ -59,18 +61,32 @@ async def get_observations_by_location(
 ):
     """Get bird observations for any location"""
 
-    # For MVP, handle simple lat,lng format
-    # We'll add geocoding in the next iteration
+    location_name = None
+    lat = None
+    lng = None
+
+    # Try to parse as coordinates first (format: "lat,lng")
     try:
-        lat, lng = location.split(",")
-        lat, lng = float(lat.strip()), float(lng.strip())
-    except:
-        # For now, default to a known location if parsing fails
-        # We'll add proper geocoding next
-        return {
-            "error": "Please use format: 'latitude,longitude' (e.g., '42.3601,-71.0589')",
-            "hint": "Geocoding coming soon!"
-        }
+        parts = location.split(",")
+        if len(parts) != 2:
+            raise ValueError("Not in lat,lng format")
+        lat, lng = float(parts[0].strip()), float(parts[1].strip())
+        # Get human-readable name for coordinates
+        location_name = await geocoding_service.reverse_geocode(lat, lng)
+    except (ValueError, AttributeError):
+        # Not coordinates, try geocoding the address
+        geocode_result = await geocoding_service.geocode_address(location)
+
+        if geocode_result is None:
+            return {
+                "error": "Location not found",
+                "hint": "Try: 'Boston, MA', '02134', or '42.3601,-71.0589'",
+                "searched_for": location
+            }
+
+        lat = geocode_result["lat"]
+        lng = geocode_result["lng"]
+        location_name = geocode_result["display_name"]
 
     headers = {"X-eBirdApiToken": EBIRD_API_KEY}
     url = f"{EBIRD_BASE_URL}/data/obs/geo/recent"
@@ -108,7 +124,11 @@ async def get_observations_by_location(
             total_bird_count += how_many
 
         return {
-            "location": {"lat": lat, "lng": lng},
+            "location": {
+                "lat": lat,
+                "lng": lng,
+                "name": location_name
+            },
             "total_observations": total_bird_count,
             "unique_species": len(species_list),
             "species": species_list,
