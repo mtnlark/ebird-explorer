@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Results for {{ location }} - eBird Explorer{% endblock %}
+
+{% block content %}
+<section class="results-section">
+    <div class="results-header">
+        <a href="/" class="back-link">&larr; New search</a>
+
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% else %}
+            <h2>Recent sightings near {{ location }}</h2>
+            <p class="results-meta">
+                {{ count }} species within {{ radius }} miles in the last {{ days }} days
+                <br>
+                <small class="location-detail">{{ display_name }}</small>
+            </p>
+        {% endif %}
+    </div>
+
+    {% if observations %}
+    <table class="observations-table">
+        <thead>
+            <tr>
+                <th>Species</th>
+                <th>Count</th>
+                <th>Location</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for obs in observations %}
+            <tr>
+                <td class="species-name">{{ obs.comName }}</td>
+                <td class="count">{{ obs.howMany if obs.howMany else "X" }}</td>
+                <td class="location">{{ obs.locName }}</td>
+                <td class="date">{{ obs.obsDt }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% elif not error %}
+    <p class="no-results">No observations found for this area and time period.</p>
+    {% endif %}
+</section>
+{% endblock %}

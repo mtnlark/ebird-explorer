@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}eBird Explorer - Find Birds Near You{% endblock %}
+
+{% block content %}
+<section class="search-section">
+    <h2>What's been seen near you?</h2>
+    <form action="/search" method="get" class="search-form">
+        <div class="form-group">
+            <label for="location">Location</label>
+            <input
+                type="text"
+                id="location"
+                name="location"
+                placeholder="City, ZIP code, or address"
+                required
+                autofocus
+            >
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="radius">Radius (miles)</label>
+                <select id="radius" name="radius">
+                    <option value="5">5 miles</option>
+                    <option value="10" selected>10 miles</option>
+                    <option value="15">15 miles</option>
+                    <option value="25">25 miles</option>
+                    <option value="31">31 miles (max)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="days">Time period</label>
+                <select id="days" name="days">
+                    <option value="7">Last 7 days</option>
+                    <option value="14" selected>Last 14 days</option>
+                    <option value="30">Last 30 days</option>
+                </select>
+            </div>
+        </div>
+        <button type="submit">Search</button>
+    </form>
+</section>
+{% endblock %}
