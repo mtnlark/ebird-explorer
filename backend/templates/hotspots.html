@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Hotspots near {{ location }} - eBird Explorer{% endblock %}
+
+{% block content %}
+<section class="results-section">
+    <div class="results-header">
+        <a href="/" class="back-link">&larr; New search</a>
+
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% else %}
+            <h2>Birding hotspots near {{ location }}</h2>
+            <p class="results-meta">
+                {{ count }} hotspots within {{ radius }} miles
+                <br>
+                <small class="location-detail">{{ display_name }}</small>
+            </p>
+        {% endif %}
+    </div>
+
+    {% if hotspots %}
+    <div class="hotspot-list">
+        {% for hs in hotspots %}
+        <a href="/hotspot/{{ hs.locId }}" class="hotspot-card">
+            <div class="hotspot-name">{{ hs.locName }}</div>
+            <div class="hotspot-meta">
+                {% if hs.numSpeciesAllTime %}
+                    <span class="species-count">{{ hs.numSpeciesAllTime }} species all time</span>
+                {% endif %}
+                {% if hs.latestObsDt %}
+                    <span class="latest-obs">Last obs: {{ hs.latestObsDt[:10] }}</span>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% elif not error %}
+    <p class="no-results">No hotspots found in this area.</p>
+    {% endif %}
+</section>
+{% endblock %}

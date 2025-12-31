@@ -37,7 +37,34 @@
                 </select>
             </div>
         </div>
-        <button type="submit">Search</button>
+        <button type="submit">Search Sightings</button>
+    </form>
+</section>
+
+<section class="search-section" style="margin-top: 1.5rem;">
+    <h2>Find birding hotspots</h2>
+    <form action="/hotspots" method="get" class="search-form">
+        <div class="form-group">
+            <label for="hs-location">Location</label>
+            <input
+                type="text"
+                id="hs-location"
+                name="location"
+                placeholder="City, ZIP code, or address"
+                required
+            >
+        </div>
+        <div class="form-group">
+            <label for="hs-radius">Radius (miles)</label>
+            <select id="hs-radius" name="radius">
+                <option value="5">5 miles</option>
+                <option value="10" selected>10 miles</option>
+                <option value="15">15 miles</option>
+                <option value="25">25 miles</option>
+                <option value="31">31 miles (max)</option>
+            </select>
+        </div>
+        <button type="submit">Find Hotspots</button>
     </form>
 </section>
 {% endblock %}

@@ -99,6 +99,35 @@ class EBirdClient:
             response.raise_for_status()
             return response.json()
 
+    async def get_hotspot_observations(
+        self,
+        loc_id: str,
+        back: int = 14,
+    ) -> list[dict]:
+        """Get recent observations at a specific hotspot."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{EBIRD_BASE_URL}/data/obs/{loc_id}/recent",
+                params={"back": min(back, 30)},
+                headers=self._headers(),
+                timeout=15.0,
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def get_hotspot_info(self, loc_id: str) -> dict | None:
+        """Get info about a specific hotspot."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{EBIRD_BASE_URL}/ref/hotspot/info/{loc_id}",
+                headers=self._headers(),
+                timeout=15.0,
+            )
+            if response.status_code == 404:
+                return None
+            response.raise_for_status()
+            return response.json()
+
 
 # Singleton instance
 ebird = EBirdClient()

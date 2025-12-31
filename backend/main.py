@@ -132,3 +132,90 @@ async def notable(
             "notable": True,
         },
     )
+
+
+@app.get("/hotspots", response_class=HTMLResponse)
+async def hotspots(
+    request: Request,
+    location: str = Query(..., min_length=1),
+    radius: int = Query(default=10, ge=1, le=31),
+):
+    """Find birding hotspots near a location."""
+    geo = await geocode(location)
+    if not geo:
+        return templates.TemplateResponse(
+            "hotspots.html",
+            {
+                "request": request,
+                "error": f"Could not find location: {location}",
+                "location": location,
+            },
+        )
+
+    try:
+        hotspot_list = await ebird.get_nearby_hotspots(
+            lat=geo["lat"],
+            lng=geo["lng"],
+            dist_km=miles_to_km(radius),
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            "hotspots.html",
+            {
+                "request": request,
+                "error": f"eBird API error: {str(e)}",
+                "location": location,
+            },
+        )
+
+    return templates.TemplateResponse(
+        "hotspots.html",
+        {
+            "request": request,
+            "location": location,
+            "display_name": geo["display_name"],
+            "hotspots": hotspot_list,
+            "radius": radius,
+            "count": len(hotspot_list),
+        },
+    )
+
+
+@app.get("/hotspot/{loc_id}", response_class=HTMLResponse)
+async def hotspot_detail(
+    request: Request,
+    loc_id: str,
+    days: int = Query(default=14, ge=1, le=30),
+):
+    """View recent observations at a specific hotspot."""
+    try:
+        info = await ebird.get_hotspot_info(loc_id)
+        if not info:
+            return templates.TemplateResponse(
+                "hotspot.html",
+                {
+                    "request": request,
+                    "error": f"Hotspot not found: {loc_id}",
+                },
+            )
+
+        observations = await ebird.get_hotspot_observations(loc_id, back=days)
+    except Exception as e:
+        return templates.TemplateResponse(
+            "hotspot.html",
+            {
+                "request": request,
+                "error": f"eBird API error: {str(e)}",
+            },
+        )
+
+    return templates.TemplateResponse(
+        "hotspot.html",
+        {
+            "request": request,
+            "hotspot": info,
+            "observations": observations,
+            "days": days,
+            "count": len(observations),
+        },
+    )

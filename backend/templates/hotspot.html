@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}{{ hotspot.name if hotspot else "Hotspot" }} - eBird Explorer{% endblock %}
+
+{% block content %}
+<section class="results-section">
+    <div class="results-header">
+        <a href="javascript:history.back()" class="back-link">&larr; Back</a>
+
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% else %}
+            <h2>{{ hotspot.name }}</h2>
+            <p class="results-meta">
+                {{ count }} species in the last {{ days }} days
+                {% if hotspot.numSpeciesAllTime %}
+                    <br>
+                    <small class="location-detail">{{ hotspot.numSpeciesAllTime }} species recorded all time</small>
+                {% endif %}
+            </p>
+
+            <div class="hotspot-actions">
+                <a href="https://ebird.org/hotspot/{{ hotspot.locId }}" target="_blank" class="ebird-link">
+                    View on eBird &rarr;
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if observations %}
+    <table class="observations-table">
+        <thead>
+            <tr>
+                <th>Species</th>
+                <th>Count</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for obs in observations %}
+            <tr>
+                <td class="species-name">{{ obs.comName }}</td>
+                <td class="count">{{ obs.howMany if obs.howMany else "X" }}</td>
+                <td class="date">{{ obs.obsDt }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% elif not error %}
+    <p class="no-results">No recent observations at this hotspot.</p>
+    {% endif %}
+</section>
+{% endblock %}

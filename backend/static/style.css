@@ -216,6 +216,55 @@ button[type="submit"]:hover {
     white-space: nowrap;
 }
 
+/* Hotspot list */
+.hotspot-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.hotspot-card {
+    display: block;
+    padding: 1rem;
+    background: #f9f9f9;
+    border-radius: 4px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.15s;
+}
+
+.hotspot-card:hover {
+    background: #f0f0f0;
+}
+
+.hotspot-name {
+    font-weight: 500;
+    color: #2d5a27;
+    margin-bottom: 0.25rem;
+}
+
+.hotspot-meta {
+    font-size: 0.85rem;
+    color: #666;
+    display: flex;
+    gap: 1rem;
+}
+
+.hotspot-actions {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+.ebird-link {
+    color: #2d5a27;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.ebird-link:hover {
+    text-decoration: underline;
+}
+
 /* Footer */
 footer {
     margin-top: 2rem;
