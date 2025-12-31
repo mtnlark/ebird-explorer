@@ -10,6 +10,15 @@
         {% if error %}
             <div class="error">{{ error }}</div>
         {% else %}
+            <div class="tabs">
+                <a href="/search?location={{ location|urlencode }}&radius={{ radius }}&days=14"
+                   class="tab">Recent</a>
+                <a href="/notable?location={{ location|urlencode }}&radius={{ radius }}&days=14"
+                   class="tab">Notable</a>
+                <a href="/hotspots?location={{ location|urlencode }}&radius={{ radius }}"
+                   class="tab active">Hotspots</a>
+            </div>
+
             <h2>Birding hotspots near {{ location }}</h2>
             <p class="results-meta">
                 {{ count }} hotspots within {{ radius }} miles

@@ -1,5 +1,6 @@
 """eBird Explorer - FastAPI application."""
 
+from datetime import datetime, date
 from fastapi import FastAPI, Request, Form, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -15,6 +16,38 @@ app = FastAPI(title="eBird Explorer")
 BASE_DIR = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
+
+
+def format_obs_date(obs_dt: str) -> str:
+    """Format observation datetime to a friendly format.
+
+    Examples: 'Today, 2:30 PM', 'Yesterday, 9:15 AM', 'Dec 28, 10:00 AM'
+    """
+    try:
+        # eBird returns dates like "2024-12-30 14:30"
+        dt = datetime.strptime(obs_dt[:16], "%Y-%m-%d %H:%M")
+        today = date.today()
+        obs_date = dt.date()
+
+        time_str = dt.strftime("%-I:%M %p").lstrip("0")
+
+        if obs_date == today:
+            return f"Today, {time_str}"
+        elif obs_date == today.replace(day=today.day - 1) if today.day > 1 else None:
+            return f"Yesterday, {time_str}"
+        else:
+            # Check if it's yesterday (handle month boundaries)
+            from datetime import timedelta
+            if obs_date == today - timedelta(days=1):
+                return f"Yesterday, {time_str}"
+            return f"{dt.strftime('%b %-d')}, {time_str}"
+    except (ValueError, IndexError):
+        # Fallback if parsing fails
+        return obs_dt
+
+
+# Register custom filter
+templates.env.filters["format_date"] = format_obs_date
 
 
 def miles_to_km(miles: float) -> int:

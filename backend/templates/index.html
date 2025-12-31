@@ -3,74 +3,41 @@
 {% block title %}eBird Explorer - Find Birds Near You{% endblock %}
 
 {% block content %}
-<section class="search-section">
+<section class="hero-search">
     <h2>What's been seen near you?</h2>
     <form action="/search" method="get" class="search-form">
-        <div class="form-group">
-            <label for="location">Location</label>
+        <div class="search-row">
             <input
                 type="text"
                 id="location"
                 name="location"
-                placeholder="City, ZIP code, or address"
+                placeholder="Enter a location..."
                 required
                 autofocus
+                class="search-input"
             >
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label for="radius">Radius (miles)</label>
-                <select id="radius" name="radius">
-                    <option value="2">2 miles</option>
-                    <option value="5">5 miles</option>
-                    <option value="10" selected>10 miles</option>
-                    <option value="15">15 miles</option>
-                    <option value="25">25 miles</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="days">Time period</label>
-                <select id="days" name="days">
-                    <option value="7">Last 7 days</option>
-                    <option value="14" selected>Last 14 days</option>
-                    <option value="30">Last 30 days</option>
-                </select>
-            </div>
-        </div>
-        <button type="submit">Search Sightings</button>
-    </form>
-</section>
-
-<section class="search-section" style="margin-top: 1.5rem;">
-    <h2>Find birding hotspots</h2>
-    <form action="/hotspots" method="get" class="search-form">
-        <div class="form-group">
-            <label for="hs-location">Location</label>
-            <input
-                type="text"
-                id="hs-location"
-                name="location"
-                placeholder="City, ZIP code, or address"
-                required
-            >
-        </div>
-        <div class="form-group">
-            <label for="hs-radius">Radius (miles)</label>
-            <select id="hs-radius" name="radius">
-                <option value="2">2 miles</option>
-                <option value="5">5 miles</option>
-                <option value="10" selected>10 miles</option>
-                <option value="15">15 miles</option>
-                <option value="25">25 miles</option>
+            <select id="radius" name="radius" class="search-select">
+                <option value="2">2 mi</option>
+                <option value="5">5 mi</option>
+                <option value="10" selected>10 mi</option>
+                <option value="15">15 mi</option>
+                <option value="25">25 mi</option>
             </select>
+            <select id="days" name="days" class="search-select">
+                <option value="7">7 days</option>
+                <option value="14" selected>14 days</option>
+                <option value="30">30 days</option>
+            </select>
+            <button type="submit">Search</button>
         </div>
-        <button type="submit">Find Hotspots</button>
     </form>
 </section>
 
-<section class="search-section" style="margin-top: 1.5rem;">
-    <h2>Species lookup</h2>
-    <p style="color: #666; margin-bottom: 1rem;">Where has a specific species been seen near you?</p>
-    <a href="/species" class="button-link">Search by Species &rarr;</a>
+<section class="secondary-actions">
+    <a href="/species" class="action-card">
+        <span class="action-icon">🔍</span>
+        <span class="action-label">Species Lookup</span>
+        <span class="action-desc">Find where a species has been seen</span>
+    </a>
 </section>
 {% endblock %}

@@ -91,7 +91,7 @@
                     <a href="https://ebird.org/checklist/{{ obs.subId }}" target="_blank" class="checklist-link" title="View checklist">📋</a>
                 </td>
                 <td class="count">{{ obs.howMany if obs.howMany else "X" }}</td>
-                <td class="date">{{ obs.obsDt }}</td>
+                <td class="date">{{ obs.obsDt|format_date }}</td>
             </tr>
             {% endfor %}
         </tbody>
