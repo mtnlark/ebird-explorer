@@ -76,5 +76,59 @@ async def search(
             "radius": radius,
             "days": days,
             "count": len(observations),
+            "notable": False,
+        },
+    )
+
+
+@app.get("/notable", response_class=HTMLResponse)
+async def notable(
+    request: Request,
+    location: str = Query(..., min_length=1),
+    radius: int = Query(default=10, ge=1, le=31),
+    days: int = Query(default=14, ge=1, le=30),
+):
+    """Search for notable (rare/unusual) observations near a location."""
+    geo = await geocode(location)
+    if not geo:
+        return templates.TemplateResponse(
+            "results.html",
+            {
+                "request": request,
+                "error": f"Could not find location: {location}",
+                "location": location,
+                "notable": True,
+            },
+        )
+
+    try:
+        observations = await ebird.get_notable_observations(
+            lat=geo["lat"],
+            lng=geo["lng"],
+            dist_km=miles_to_km(radius),
+            back=days,
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            "results.html",
+            {
+                "request": request,
+                "error": f"eBird API error: {str(e)}",
+                "location": location,
+                "notable": True,
+            },
+        )
+
+    return templates.TemplateResponse(
+        "results.html",
+        {
+            "request": request,
+            "location": location,
+            "display_name": geo["display_name"],
+            "observations": observations,
+            "radius": radius,
+            "days": days,
+            "count": len(observations),
+            "notable": True,
         },
     )

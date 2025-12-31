@@ -116,6 +116,32 @@ button[type="submit"]:hover {
     text-decoration: underline;
 }
 
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #eee;
+}
+
+.tab {
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    color: #666;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+}
+
+.tab:hover {
+    color: #2d5a27;
+}
+
+.tab.active {
+    color: #2d5a27;
+    border-bottom-color: #2d5a27;
+    font-weight: 500;
+}
+
 .results-header h2 {
     color: #2d5a27;
     margin-bottom: 0.5rem;

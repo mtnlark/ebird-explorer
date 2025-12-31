@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Results for {{ location }} - eBird Explorer{% endblock %}
+{% block title %}{% if notable %}Notable{% else %}Recent{% endif %} sightings near {{ location }} - eBird Explorer{% endblock %}
 
 {% block content %}
 <section class="results-section">
@@ -10,9 +10,16 @@
         {% if error %}
             <div class="error">{{ error }}</div>
         {% else %}
-            <h2>Recent sightings near {{ location }}</h2>
+            <div class="tabs">
+                <a href="/search?location={{ location|urlencode }}&radius={{ radius }}&days={{ days }}"
+                   class="tab {% if not notable %}active{% endif %}">Recent</a>
+                <a href="/notable?location={{ location|urlencode }}&radius={{ radius }}&days={{ days }}"
+                   class="tab {% if notable %}active{% endif %}">Notable</a>
+            </div>
+
+            <h2>{% if notable %}Notable{% else %}Recent{% endif %} sightings near {{ location }}</h2>
             <p class="results-meta">
-                {{ count }} species within {{ radius }} miles in the last {{ days }} days
+                {{ count }} {% if notable %}notable sightings{% else %}species{% endif %} within {{ radius }} miles in the last {{ days }} days
                 <br>
                 <small class="location-detail">{{ display_name }}</small>
             </p>
