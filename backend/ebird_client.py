@@ -128,6 +128,42 @@ class EBirdClient:
             response.raise_for_status()
             return response.json()
 
+    async def get_taxonomy(self, species_filter: str = "") -> list[dict]:
+        """Get eBird taxonomy (species list) for autocomplete."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{EBIRD_BASE_URL}/ref/taxonomy/ebird",
+                params={"fmt": "json", "cat": "species"},
+                headers=self._headers(),
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def get_nearest_species_observations(
+        self,
+        species_code: str,
+        lat: float,
+        lng: float,
+        dist_km: int = 50,
+        back: int = 14,
+    ) -> list[dict]:
+        """Get nearest recent observations of a specific species."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{EBIRD_BASE_URL}/data/nearest/geo/recent/{species_code}",
+                params={
+                    "lat": lat,
+                    "lng": lng,
+                    "dist": min(dist_km, 50),
+                    "back": min(back, 30),
+                },
+                headers=self._headers(),
+                timeout=15.0,
+            )
+            response.raise_for_status()
+            return response.json()
+
 
 # Singleton instance
 ebird = EBirdClient()

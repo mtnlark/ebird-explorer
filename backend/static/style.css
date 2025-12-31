@@ -97,6 +97,20 @@ button[type="submit"]:hover {
     background: #234a1e;
 }
 
+.button-link {
+    display: inline-block;
+    background: #2d5a27;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 4px;
+    text-decoration: none;
+}
+
+.button-link:hover {
+    background: #234a1e;
+}
+
 /* Results */
 .results-section {
     background: white;
@@ -263,6 +277,68 @@ button[type="submit"]:hover {
 
 .ebird-link:hover {
     text-decoration: underline;
+}
+
+/* Species autocomplete */
+.autocomplete-wrapper {
+    position: relative;
+}
+
+.autocomplete-results {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.autocomplete-item {
+    padding: 0.75rem;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover {
+    background: #f5f5f5;
+}
+
+.autocomplete-item.no-results {
+    color: #888;
+    cursor: default;
+}
+
+.autocomplete-item .species-common {
+    display: block;
+    font-weight: 500;
+}
+
+.autocomplete-item .species-sci {
+    display: block;
+    font-size: 0.85rem;
+    color: #666;
+    font-style: italic;
+}
+
+.sci-name {
+    font-weight: normal;
+    font-style: italic;
+    color: #666;
+}
+
+.species-form .search-form {
+    max-width: 500px;
 }
 
 /* Footer */

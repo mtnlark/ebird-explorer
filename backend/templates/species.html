@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}{% if species_name %}{{ species_name }} near {{ location }}{% else %}Species Lookup{% endif %} - eBird Explorer{% endblock %}
+
+{% block content %}
+<section class="results-section">
+    <div class="results-header">
+        <a href="/" class="back-link">&larr; Home</a>
+
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+
+        {% if not species_name %}
+            <h2>Where has a species been seen?</h2>
+            <form action="/species" method="get" class="search-form species-form">
+                <div class="form-group">
+                    <label for="species-input">Species</label>
+                    <div class="autocomplete-wrapper">
+                        <input
+                            type="text"
+                            id="species-input"
+                            placeholder="Start typing a species name..."
+                            autocomplete="off"
+                            required
+                        >
+                        <input type="hidden" id="species" name="species" value="{{ species or '' }}">
+                        <div id="autocomplete-results" class="autocomplete-results"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="location">Near</label>
+                    <input
+                        type="text"
+                        id="location"
+                        name="location"
+                        placeholder="City, ZIP code, or address"
+                        value="{{ location or '' }}"
+                        required
+                    >
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="radius">Radius (miles)</label>
+                        <select id="radius" name="radius">
+                            <option value="5">5 miles</option>
+                            <option value="10">10 miles</option>
+                            <option value="25" selected>25 miles</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="days">Time period</label>
+                        <select id="days" name="days">
+                            <option value="7">Last 7 days</option>
+                            <option value="14" selected>Last 14 days</option>
+                            <option value="30">Last 30 days</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit">Find Sightings</button>
+            </form>
+        {% else %}
+            <h2>{{ species_name }} <small class="sci-name">{{ species_sci }}</small></h2>
+            <p class="results-meta">
+                {{ count }} sighting{{ 's' if count != 1 else '' }} within {{ radius }} miles of {{ location }} in the last {{ days }} days
+                <br>
+                <small class="location-detail">{{ display_name }}</small>
+            </p>
+            <p><a href="/species" class="back-link">Search for another species</a></p>
+        {% endif %}
+    </div>
+
+    {% if observations %}
+    <table class="observations-table">
+        <thead>
+            <tr>
+                <th>Location</th>
+                <th>Count</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for obs in observations %}
+            <tr>
+                <td class="location">{{ obs.locName }}</td>
+                <td class="count">{{ obs.howMany if obs.howMany else "X" }}</td>
+                <td class="date">{{ obs.obsDt }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% elif species_name and not error %}
+    <p class="no-results">No sightings of {{ species_name }} found in this area recently.</p>
+    {% endif %}
+</section>
+
+<script>
+(function() {
+    const input = document.getElementById('species-input');
+    const hidden = document.getElementById('species');
+    const results = document.getElementById('autocomplete-results');
+    if (!input) return;
+
+    let debounceTimer;
+
+    input.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        const q = this.value.trim();
+
+        if (q.length < 2) {
+            results.innerHTML = '';
+            results.style.display = 'none';
+            return;
+        }
+
+        debounceTimer = setTimeout(async () => {
+            try {
+                const response = await fetch(`/api/species?q=${encodeURIComponent(q)}`);
+                const data = await response.json();
+
+                if (data.length === 0) {
+                    results.innerHTML = '<div class="autocomplete-item no-results">No species found</div>';
+                } else {
+                    results.innerHTML = data.map(s =>
+                        `<div class="autocomplete-item" data-code="${s.code}" data-name="${s.name}">
+                            <span class="species-common">${s.name}</span>
+                            <span class="species-sci">${s.sciName}</span>
+                        </div>`
+                    ).join('');
+                }
+                results.style.display = 'block';
+            } catch (e) {
+                console.error('Autocomplete error:', e);
+            }
+        }, 200);
+    });
+
+    results.addEventListener('click', function(e) {
+        const item = e.target.closest('.autocomplete-item');
+        if (item && item.dataset.code) {
+            input.value = item.dataset.name;
+            hidden.value = item.dataset.code;
+            results.style.display = 'none';
+        }
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.autocomplete-wrapper')) {
+            results.style.display = 'none';
+        }
+    });
+})();
+</script>
+{% endblock %}

@@ -1,7 +1,7 @@
 """eBird Explorer - FastAPI application."""
 
 from fastapi import FastAPI, Request, Form, Query
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
@@ -215,6 +215,127 @@ async def hotspot_detail(
             "request": request,
             "hotspot": info,
             "observations": observations,
+            "days": days,
+            "count": len(observations),
+        },
+    )
+
+
+# Cache taxonomy in memory (it's ~17k species, ~3MB, doesn't change often)
+_taxonomy_cache: list[dict] | None = None
+
+
+@app.get("/api/species")
+async def api_species(q: str = Query(default="", min_length=0)):
+    """API endpoint for species autocomplete."""
+    global _taxonomy_cache
+    if _taxonomy_cache is None:
+        _taxonomy_cache = await ebird.get_taxonomy()
+
+    if not q:
+        return []
+
+    q_lower = q.lower()
+    matches = []
+    for species in _taxonomy_cache:
+        com_name = species.get("comName", "").lower()
+        sci_name = species.get("sciName", "").lower()
+        if q_lower in com_name or q_lower in sci_name:
+            matches.append({
+                "code": species["speciesCode"],
+                "name": species["comName"],
+                "sciName": species["sciName"],
+            })
+            if len(matches) >= 10:
+                break
+    return matches
+
+
+@app.get("/species", response_class=HTMLResponse)
+async def species_search(
+    request: Request,
+    species: str = Query(default=""),
+    location: str = Query(default=""),
+    radius: int = Query(default=25, ge=1, le=50),
+    days: int = Query(default=14, ge=1, le=30),
+):
+    """Search for where a species has been seen near a location."""
+    # If no species selected yet, show the search form
+    if not species or not location:
+        return templates.TemplateResponse(
+            "species.html",
+            {
+                "request": request,
+                "species": species,
+                "location": location,
+            },
+        )
+
+    # Geocode the location
+    geo = await geocode(location)
+    if not geo:
+        return templates.TemplateResponse(
+            "species.html",
+            {
+                "request": request,
+                "error": f"Could not find location: {location}",
+                "species": species,
+                "location": location,
+            },
+        )
+
+    # Get species info from taxonomy cache
+    global _taxonomy_cache
+    if _taxonomy_cache is None:
+        _taxonomy_cache = await ebird.get_taxonomy()
+
+    species_info = None
+    for s in _taxonomy_cache:
+        if s["speciesCode"] == species:
+            species_info = s
+            break
+
+    if not species_info:
+        return templates.TemplateResponse(
+            "species.html",
+            {
+                "request": request,
+                "error": f"Species not found: {species}",
+                "location": location,
+            },
+        )
+
+    # Fetch observations
+    try:
+        observations = await ebird.get_nearest_species_observations(
+            species_code=species,
+            lat=geo["lat"],
+            lng=geo["lng"],
+            dist_km=miles_to_km(radius),
+            back=days,
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            "species.html",
+            {
+                "request": request,
+                "error": f"eBird API error: {str(e)}",
+                "species": species,
+                "location": location,
+            },
+        )
+
+    return templates.TemplateResponse(
+        "species.html",
+        {
+            "request": request,
+            "species_code": species,
+            "species_name": species_info["comName"],
+            "species_sci": species_info["sciName"],
+            "location": location,
+            "display_name": geo["display_name"],
+            "observations": observations,
+            "radius": radius,
             "days": days,
             "count": len(observations),
         },
