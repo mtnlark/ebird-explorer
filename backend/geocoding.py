@@ -1,4 +1,8 @@
-"""Geocoding via OpenStreetMap Nominatim with persistent JSON cache."""
+"""Geocoding via OpenStreetMap Nominatim with hybrid cache.
+
+Uses file-based cache locally (persists across restarts) and falls back
+to in-memory cache on serverless platforms with read-only filesystems.
+"""
 
 import json
 import httpx
@@ -8,15 +12,28 @@ CACHE_FILE = Path(__file__).parent.parent / "geocode_cache.json"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 USER_AGENT = "eBirdExplorer/1.0 (personal birding tool)"
 
+# In-memory fallback cache
+_memory_cache: dict = {}
+
 
 def _load_cache() -> dict:
-    if CACHE_FILE.exists():
-        return json.loads(CACHE_FILE.read_text())
-    return {}
+    """Load from file cache, fall back to memory cache."""
+    try:
+        if CACHE_FILE.exists():
+            return json.loads(CACHE_FILE.read_text())
+    except (OSError, json.JSONDecodeError):
+        pass
+    return _memory_cache.copy()
 
 
 def _save_cache(cache: dict) -> None:
-    CACHE_FILE.write_text(json.dumps(cache, indent=2))
+    """Try to save to file, silently fall back to memory-only on failure."""
+    global _memory_cache
+    _memory_cache = cache
+    try:
+        CACHE_FILE.write_text(json.dumps(cache, indent=2))
+    except OSError:
+        pass  # Read-only filesystem (e.g., Vercel), memory cache is fine
 
 
 async def geocode(location: str) -> dict | None:
@@ -24,7 +41,7 @@ async def geocode(location: str) -> dict | None:
     Convert a location string to lat/lng coordinates.
 
     Returns dict with 'lat', 'lng', 'display_name' or None if not found.
-    Results are cached permanently (coordinates don't change).
+    Results are cached (file-based locally, in-memory on serverless).
     """
     cache = _load_cache()
     cache_key = location.lower().strip()
@@ -58,5 +75,4 @@ async def geocode(location: str) -> dict | None:
 
     cache[cache_key] = geocoded
     _save_cache(cache)
-
     return geocoded
