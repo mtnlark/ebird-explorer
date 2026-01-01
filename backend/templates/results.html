@@ -44,12 +44,14 @@
                 <td class="species-name">{{ obs.comName }}</td>
                 <td class="count">{{ obs.howMany if obs.howMany else "X" }}</td>
                 <td class="location">
-                    {% if not obs.locationPrivate %}
-                        <a href="/hotspot/{{ obs.locId }}" class="loc-link">{{ obs.locName }}</a>
-                    {% else %}
-                        {{ obs.locName }}
-                    {% endif %}
-                    <a href="https://ebird.org/checklist/{{ obs.subId }}" target="_blank" class="checklist-link" title="View checklist">📋</a>
+                    <span class="loc-name">
+                        {% if not obs.locationPrivate %}
+                            <a href="/hotspot/{{ obs.locId }}" class="loc-link">{{ obs.locName }}</a>
+                        {% else %}
+                            {{ obs.locName }}
+                        {% endif %}
+                    </span>
+                    <a href="https://ebird.org/checklist/{{ obs.subId }}" target="_blank" class="checklist-link" title="View checklist on eBird">📋</a>
                 </td>
                 <td class="date">{{ obs.obsDt|format_date }}</td>
             </tr>

@@ -4,14 +4,15 @@
 
 {% block content %}
 <section class="hero-search">
-    <h2>What's been seen near you?</h2>
+    <p class="hero-tagline">Discover what birds are around you</p>
+    <h2>Recent sightings near...</h2>
     <form action="/search" method="get" class="search-form">
         <div class="search-row">
             <input
                 type="text"
                 id="location"
                 name="location"
-                placeholder="Enter a location..."
+                placeholder="Enter a city, ZIP, or address"
                 required
                 autofocus
                 class="search-input"
@@ -33,11 +34,93 @@
     </form>
 </section>
 
-<section class="secondary-actions">
-    <a href="/species" class="action-card">
-        <span class="action-icon">🔍</span>
-        <span class="action-label">Species Lookup</span>
-        <span class="action-desc">Find where a species has been seen</span>
-    </a>
+<div class="home-divider">
+    <span>or</span>
+</div>
+
+<section class="hero-search species-search-section">
+    <h2>Find a specific species</h2>
+    <form action="/species" method="get" class="search-form">
+        <div class="search-row species-row">
+            <div class="autocomplete-wrapper">
+                <input
+                    type="text"
+                    id="species-input"
+                    placeholder="Start typing a species name..."
+                    autocomplete="off"
+                    class="search-input"
+                >
+                <input type="hidden" id="species" name="species">
+                <div id="autocomplete-results" class="autocomplete-results"></div>
+            </div>
+            <span class="search-near">near</span>
+            <input
+                type="text"
+                id="species-location"
+                name="location"
+                placeholder="Location"
+                class="search-input location-input"
+            >
+            <button type="submit">Find</button>
+        </div>
+    </form>
 </section>
+
+<script>
+(function() {
+    const input = document.getElementById('species-input');
+    const hidden = document.getElementById('species');
+    const results = document.getElementById('autocomplete-results');
+    if (!input) return;
+
+    let debounceTimer;
+
+    input.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        const q = this.value.trim();
+
+        if (q.length < 2) {
+            results.innerHTML = '';
+            results.style.display = 'none';
+            return;
+        }
+
+        debounceTimer = setTimeout(async () => {
+            try {
+                const response = await fetch(`/api/species?q=${encodeURIComponent(q)}`);
+                const data = await response.json();
+
+                if (data.length === 0) {
+                    results.innerHTML = '<div class="autocomplete-item no-results">No species found</div>';
+                } else {
+                    results.innerHTML = data.map(s =>
+                        `<div class="autocomplete-item" data-code="${s.code}" data-name="${s.name}">
+                            <span class="species-common">${s.name}</span>
+                            <span class="species-sci">${s.sciName}</span>
+                        </div>`
+                    ).join('');
+                }
+                results.style.display = 'block';
+            } catch (e) {
+                console.error('Autocomplete error:', e);
+            }
+        }, 200);
+    });
+
+    results.addEventListener('click', function(e) {
+        const item = e.target.closest('.autocomplete-item');
+        if (item && item.dataset.code) {
+            input.value = item.dataset.name;
+            hidden.value = item.dataset.code;
+            results.style.display = 'none';
+        }
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.autocomplete-wrapper')) {
+            results.style.display = 'none';
+        }
+    });
+})();
+</script>
 {% endblock %}
