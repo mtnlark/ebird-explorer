@@ -36,6 +36,17 @@ def _save_cache(cache: dict) -> None:
         pass  # Read-only filesystem (e.g., Vercel), memory cache is fine
 
 
+def _looks_like_us_zip(location: str) -> bool:
+    """Check if input looks like a US ZIP code (5 digits or 5+4 format)."""
+    loc = location.strip()
+    # 5 digits or 5 digits + hyphen + 4 digits
+    if loc.isdigit() and len(loc) == 5:
+        return True
+    if len(loc) == 10 and loc[:5].isdigit() and loc[5] == '-' and loc[6:].isdigit():
+        return True
+    return False
+
+
 async def geocode(location: str) -> dict | None:
     """
     Convert a location string to lat/lng coordinates.
@@ -49,11 +60,16 @@ async def geocode(location: str) -> dict | None:
     if cache_key in cache:
         return cache[cache_key]
 
+    # For US ZIP codes, append USA to avoid matching foreign postal codes
+    query = location
+    if _looks_like_us_zip(location):
+        query = f"{location}, USA"
+
     async with httpx.AsyncClient() as client:
         response = await client.get(
             NOMINATIM_URL,
             params={
-                "q": location,
+                "q": query,
                 "format": "json",
                 "limit": 1,
             },

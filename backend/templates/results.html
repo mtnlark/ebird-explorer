@@ -30,10 +30,12 @@
 
     {% if observations %}
     <div class="results-controls">
+        {% if notable %}
         <div class="view-toggle">
             <button type="button" id="view-grouped" class="view-btn active">Group by species</button>
             <button type="button" id="view-all" class="view-btn">Show all</button>
         </div>
+        {% endif %}
         <div class="filter-box">
             <input type="text" id="species-filter" placeholder="Filter species..." class="filter-input">
         </div>
@@ -49,8 +51,11 @@
         const filterInput = document.getElementById('species-filter');
         const btnGrouped = document.getElementById('view-grouped');
         const btnAll = document.getElementById('view-all');
+        const isNotable = {{ 'true' if notable else 'false' }};
 
-        let viewMode = 'grouped';
+        // For Recent view, always show flat list (API returns 1 record per species)
+        // For Notable view, default to grouped (API returns multiple records per species)
+        let viewMode = isNotable ? 'grouped' : 'all';
         let filterText = '';
         let expandedSpecies = new Set();
 
@@ -155,7 +160,7 @@
                 <thead>
                     <tr>
                         <th>Species</th>
-                        <th>Count</th>
+                        <th>Sightings</th>
                         <th>Locations</th>
                         <th>Most Recent</th>
                     </tr>
@@ -172,7 +177,7 @@
                         ${hasMultiple ? `<span class="expand-icon">${expandIcon}</span>` : '<span class="expand-icon-spacer"></span>'}
                         ${group.name}
                     </td>
-                    <td class="count">${group.totalCount}</td>
+                    <td class="count">${group.observations.length}</td>
                     <td class="locations-count">${group.locations.size} location${group.locations.size !== 1 ? 's' : ''}</td>
                     <td class="date">${formatDate(group.mostRecent)}</td>
                 </tr>`;
@@ -206,20 +211,22 @@
             });
         }
 
-        // Event listeners
-        btnGrouped.addEventListener('click', () => {
-            viewMode = 'grouped';
-            btnGrouped.classList.add('active');
-            btnAll.classList.remove('active');
-            render();
-        });
+        // Event listeners for toggle buttons (only present for Notable view)
+        if (btnGrouped && btnAll) {
+            btnGrouped.addEventListener('click', () => {
+                viewMode = 'grouped';
+                btnGrouped.classList.add('active');
+                btnAll.classList.remove('active');
+                render();
+            });
 
-        btnAll.addEventListener('click', () => {
-            viewMode = 'all';
-            btnAll.classList.add('active');
-            btnGrouped.classList.remove('active');
-            render();
-        });
+            btnAll.addEventListener('click', () => {
+                viewMode = 'all';
+                btnAll.classList.add('active');
+                btnGrouped.classList.remove('active');
+                render();
+            });
+        }
 
         filterInput.addEventListener('input', (e) => {
             filterText = e.target.value.trim();
