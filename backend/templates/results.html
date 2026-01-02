@@ -170,11 +170,10 @@
             for (const group of groups) {
                 const isExpanded = expandedSpecies.has(group.name);
                 const expandIcon = isExpanded ? '▼' : '▶';
-                const hasMultiple = group.observations.length > 1;
 
-                html += `<tr class="species-group-row ${hasMultiple ? 'expandable' : ''}" data-species="${group.name}">
+                html += `<tr class="species-group-row expandable" data-species="${group.name}">
                     <td class="species-name">
-                        ${hasMultiple ? `<span class="expand-icon">${expandIcon}</span>` : '<span class="expand-icon-spacer"></span>'}
+                        <span class="expand-icon">${expandIcon}</span>
                         ${group.name}
                     </td>
                     <td class="count">${group.observations.length}</td>
