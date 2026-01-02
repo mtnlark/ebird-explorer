@@ -258,9 +258,27 @@ async def hotspot_detail(
 _taxonomy_cache: list[dict] | None = None
 
 
+@app.get("/api/taxonomy")
+async def api_taxonomy():
+    """API endpoint to get full species taxonomy for client-side fuzzy search."""
+    global _taxonomy_cache
+    if _taxonomy_cache is None:
+        _taxonomy_cache = await ebird.get_taxonomy()
+
+    # Return simplified list for client-side use
+    return [
+        {
+            "code": species["speciesCode"],
+            "name": species["comName"],
+            "sciName": species["sciName"],
+        }
+        for species in _taxonomy_cache
+    ]
+
+
 @app.get("/api/species")
 async def api_species(q: str = Query(default="", min_length=0)):
-    """API endpoint for species autocomplete."""
+    """API endpoint for species autocomplete (legacy, prefer /api/taxonomy for fuzzy)."""
     global _taxonomy_cache
     if _taxonomy_cache is None:
         _taxonomy_cache = await ebird.get_taxonomy()

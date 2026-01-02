@@ -66,6 +66,7 @@
     </form>
 </section>
 
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
 <script>
 (function() {
     const input = document.getElementById('species-input');
@@ -73,7 +74,54 @@
     const results = document.getElementById('autocomplete-results');
     if (!input) return;
 
+    let taxonomy = null;
+    let fuse = null;
     let debounceTimer;
+    let loading = false;
+
+    // Preload taxonomy on focus
+    async function loadTaxonomy() {
+        if (taxonomy || loading) return;
+        loading = true;
+        try {
+            const response = await fetch('/api/taxonomy');
+            taxonomy = await response.json();
+            fuse = new Fuse(taxonomy, {
+                keys: ['name', 'sciName'],
+                threshold: 0.4,
+                distance: 100,
+                ignoreLocation: true,
+                includeScore: true
+            });
+        } catch (e) {
+            console.error('Failed to load taxonomy:', e);
+        }
+        loading = false;
+    }
+
+    input.addEventListener('focus', loadTaxonomy);
+
+    function search(query) {
+        if (!taxonomy || !fuse) return [];
+
+        const q = query.toLowerCase();
+
+        // Find exact prefix matches
+        const prefixMatches = taxonomy.filter(s =>
+            s.name.toLowerCase().startsWith(q) ||
+            s.sciName.toLowerCase().startsWith(q)
+        ).slice(0, 5);
+
+        // Get fuzzy matches
+        const fuzzyResults = fuse.search(query, { limit: 15 });
+        const fuzzyMatches = fuzzyResults
+            .map(r => r.item)
+            .filter(item => !prefixMatches.some(p => p.code === item.code));
+
+        // Combine: prefix first, then fuzzy
+        const combined = [...prefixMatches, ...fuzzyMatches].slice(0, 10);
+        return combined;
+    }
 
     input.addEventListener('input', function() {
         clearTimeout(debounceTimer);
@@ -85,26 +133,32 @@
             return;
         }
 
-        debounceTimer = setTimeout(async () => {
-            try {
-                const response = await fetch(`/api/species?q=${encodeURIComponent(q)}`);
-                const data = await response.json();
-
-                if (data.length === 0) {
-                    results.innerHTML = '<div class="autocomplete-item no-results">No species found</div>';
-                } else {
-                    results.innerHTML = data.map(s =>
-                        `<div class="autocomplete-item" data-code="${s.code}" data-name="${s.name}">
-                            <span class="species-common">${s.name}</span>
-                            <span class="species-sci">${s.sciName}</span>
-                        </div>`
-                    ).join('');
-                }
+        debounceTimer = setTimeout(() => {
+            if (!taxonomy) {
+                results.innerHTML = '<div class="autocomplete-item no-results">Loading species list...</div>';
                 results.style.display = 'block';
-            } catch (e) {
-                console.error('Autocomplete error:', e);
+                loadTaxonomy().then(() => {
+                    if (input.value.trim().length >= 2) {
+                        input.dispatchEvent(new Event('input'));
+                    }
+                });
+                return;
             }
-        }, 200);
+
+            const matches = search(q);
+
+            if (matches.length === 0) {
+                results.innerHTML = '<div class="autocomplete-item no-results">No species found</div>';
+            } else {
+                results.innerHTML = matches.map(s =>
+                    `<div class="autocomplete-item" data-code="${s.code}" data-name="${s.name}">
+                        <span class="species-common">${s.name}</span>
+                        <span class="species-sci">${s.sciName}</span>
+                    </div>`
+                ).join('');
+            }
+            results.style.display = 'block';
+        }, 150);
     });
 
     results.addEventListener('click', function(e) {
