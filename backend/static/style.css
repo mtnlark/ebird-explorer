@@ -1,5 +1,35 @@
 /* eBird Explorer - Warm, inviting styling */
 
+:root {
+    /* Primary colors */
+    --color-primary: #3d7a37;
+    --color-primary-dark: #2d5a27;
+    --color-primary-bg: #f0f4ed;
+    --color-primary-bg-subtle: #f8faf7;
+    --color-primary-focus: rgba(61, 122, 55, 0.15);
+
+    /* Text colors */
+    --color-text: #333;
+    --color-text-secondary: #666;
+    --color-text-muted: #888;
+    --color-text-faint: #999;
+
+    /* Border colors */
+    --color-border: #ccc;
+    --color-border-light: #ddd;
+    --color-border-lighter: #eee;
+
+    /* Shadows */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --shadow-btn: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+    /* Error colors */
+    --color-error-bg: #fef2f2;
+    --color-error-text: #b91c1c;
+    --color-error-border: #fecaca;
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -9,17 +39,17 @@
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     line-height: 1.6;
-    color: #333;
+    color: var(--color-text);
     max-width: 900px;
     margin: 0 auto;
     padding: 1rem;
-    background: linear-gradient(to bottom, #f0f4ed 0%, #fafafa 200px);
+    background: linear-gradient(to bottom, var(--color-primary-bg) 0%, #fafafa 200px);
     min-height: 100vh;
 }
 
 header {
     padding: 1rem 0;
-    border-bottom: 3px solid #3d7a37;
+    border-bottom: 3px solid var(--color-primary);
     margin-bottom: 2rem;
 }
 
@@ -28,7 +58,7 @@ header h1 {
 }
 
 header h1 a {
-    color: #3d7a37;
+    color: var(--color-primary);
     text-decoration: none;
 }
 
@@ -37,19 +67,19 @@ header h1 a {
     background: white;
     padding: 2rem;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: var(--shadow-sm);
     text-align: center;
 }
 
 .hero-tagline {
-    color: #666;
+    color: var(--color-text-secondary);
     margin-bottom: 0.5rem;
     font-size: 0.95rem;
 }
 
 .hero-search h2 {
     margin-bottom: 1.25rem;
-    color: #3d7a37;
+    color: var(--color-primary);
     font-size: 1.4rem;
     font-weight: 600;
 }
@@ -85,12 +115,12 @@ header h1 a {
     content: '';
     flex: 1;
     height: 1px;
-    background: #ddd;
+    background: var(--color-border-light);
 }
 
 .home-divider span {
     padding: 0 1rem;
-    color: #999;
+    color: var(--color-text-faint);
     font-size: 0.9rem;
 }
 
@@ -115,7 +145,7 @@ header h1 a {
 }
 
 .search-near {
-    color: #666;
+    color: var(--color-text-secondary);
     font-size: 0.9rem;
 }
 
@@ -130,12 +160,12 @@ header h1 a {
     background: white;
     padding: 2rem;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: var(--shadow-sm);
 }
 
 .search-section h2 {
     margin-bottom: 1.5rem;
-    color: #3d7a37;
+    color: var(--color-primary);
 }
 
 .search-form {
@@ -168,7 +198,7 @@ input[type="text"],
 select {
     padding: 0.75rem;
     font-size: 1rem;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-border);
     border-radius: 6px;
     width: 100%;
     transition: border-color 0.15s, box-shadow 0.15s;
@@ -177,12 +207,12 @@ select {
 input[type="text"]:focus,
 select:focus {
     outline: none;
-    border-color: #3d7a37;
-    box-shadow: 0 0 0 3px rgba(61, 122, 55, 0.15);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-focus);
 }
 
 button[type="submit"] {
-    background: #3d7a37;
+    background: var(--color-primary);
     color: white;
     padding: 0.75rem 1.5rem;
     font-size: 1rem;
@@ -194,25 +224,11 @@ button[type="submit"] {
 }
 
 button[type="submit"]:hover {
-    background: #2d5a27;
+    background: var(--color-primary-dark);
 }
 
 button[type="submit"]:active {
     transform: scale(0.98);
-}
-
-.button-link {
-    display: inline-block;
-    background: #3d7a37;
-    color: white;
-    padding: 0.75rem 1.5rem;
-    font-size: 1rem;
-    border-radius: 6px;
-    text-decoration: none;
-}
-
-.button-link:hover {
-    background: #2d5a27;
 }
 
 /* Results */
@@ -220,13 +236,13 @@ button[type="submit"]:active {
     background: white;
     padding: 1.5rem;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: var(--shadow-sm);
 }
 
 .back-link {
     display: inline-block;
     margin-bottom: 1rem;
-    color: #3d7a37;
+    color: var(--color-primary);
     text-decoration: none;
     font-size: 0.9rem;
 }
@@ -241,7 +257,7 @@ button[type="submit"]:active {
     gap: 0.5rem;
     margin-bottom: 1.5rem;
     padding: 0.35rem;
-    background: #f0f4ed;
+    background: var(--color-primary-bg);
     border-radius: 8px;
     width: fit-content;
 }
@@ -249,7 +265,7 @@ button[type="submit"]:active {
 .tab {
     padding: 0.6rem 1.25rem;
     text-decoration: none;
-    color: #555;
+    color: var(--color-text-secondary);
     border-radius: 6px;
     font-size: 0.95rem;
     font-weight: 500;
@@ -257,43 +273,43 @@ button[type="submit"]:active {
 }
 
 .tab:hover {
-    color: #3d7a37;
+    color: var(--color-primary);
     background: rgba(255,255,255,0.6);
 }
 
 .tab.active {
-    color: #3d7a37;
+    color: var(--color-primary);
     background: white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-btn);
 }
 
 .results-header h2 {
-    color: #3d7a37;
+    color: var(--color-primary);
     margin-bottom: 0.5rem;
     font-size: 1.5rem;
     font-weight: 600;
 }
 
 .results-meta {
-    color: #666;
+    color: var(--color-text-secondary);
     margin-bottom: 1.5rem;
 }
 
 .location-detail {
-    color: #888;
+    color: var(--color-text-muted);
 }
 
 .error {
-    background: #fef2f2;
-    color: #b91c1c;
+    background: var(--color-error-bg);
+    color: var(--color-error-text);
     padding: 1rem;
     border-radius: 8px;
     margin: 1rem 0;
-    border: 1px solid #fecaca;
+    border: 1px solid var(--color-error-border);
 }
 
 .no-results {
-    color: #666;
+    color: var(--color-text-secondary);
     font-style: italic;
     padding: 2rem;
     text-align: center;
@@ -309,16 +325,16 @@ button[type="submit"]:active {
 .observations-table td {
     padding: 0.75rem;
     text-align: left;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--color-border-lighter);
 }
 
 .observations-table th {
-    background: #f8faf7;
+    background: var(--color-primary-bg-subtle);
     font-weight: 600;
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    color: #666;
+    color: var(--color-text-secondary);
 }
 
 .observations-table tbody tr {
@@ -326,23 +342,23 @@ button[type="submit"]:active {
 }
 
 .observations-table tbody tr:hover {
-    background: #f8faf7;
+    background: var(--color-primary-bg-subtle);
 }
 
 .species-name {
     font-weight: 500;
-    color: #2a2a2a;
+    color: var(--color-text);
 }
 
 .count {
     text-align: center;
-    color: #666;
+    color: var(--color-text-secondary);
 }
 
 /* Location cell - flex layout to keep icon visible */
 .location {
     font-size: 0.9rem;
-    color: #666;
+    color: var(--color-text-secondary);
     max-width: 280px;
 }
 
@@ -361,7 +377,7 @@ button[type="submit"]:active {
 }
 
 .loc-link {
-    color: #3d7a37;
+    color: var(--color-primary);
     text-decoration: none;
 }
 
@@ -384,7 +400,7 @@ button[type="submit"]:active {
 
 .date {
     font-size: 0.9rem;
-    color: #888;
+    color: var(--color-text-muted);
     white-space: nowrap;
 }
 
@@ -398,7 +414,7 @@ button[type="submit"]:active {
 .hotspot-card {
     display: block;
     padding: 1rem;
-    background: #f8faf7;
+    background: var(--color-primary-bg-subtle);
     border-radius: 8px;
     text-decoration: none;
     color: inherit;
@@ -406,19 +422,19 @@ button[type="submit"]:active {
 }
 
 .hotspot-card:hover {
-    background: #f0f4ed;
+    background: var(--color-primary-bg);
     transform: translateX(2px);
 }
 
 .hotspot-name {
     font-weight: 500;
-    color: #3d7a37;
+    color: var(--color-primary);
     margin-bottom: 0.25rem;
 }
 
 .hotspot-meta {
     font-size: 0.85rem;
-    color: #666;
+    color: var(--color-text-secondary);
     display: flex;
     gap: 1rem;
 }
@@ -429,7 +445,7 @@ button[type="submit"]:active {
 }
 
 .ebird-link {
-    color: #3d7a37;
+    color: var(--color-primary);
     text-decoration: none;
     font-size: 0.9rem;
 }
@@ -450,19 +466,19 @@ button[type="submit"]:active {
     left: 0;
     right: 0;
     background: white;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-border);
     border-top: none;
     border-radius: 0 0 6px 6px;
     max-height: 300px;
     overflow-y: auto;
     z-index: 100;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: var(--shadow-md);
 }
 
 .autocomplete-item {
     padding: 0.75rem;
     cursor: pointer;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--color-border-lighter);
     text-align: left;
 }
 
@@ -471,11 +487,11 @@ button[type="submit"]:active {
 }
 
 .autocomplete-item:hover {
-    background: #f8faf7;
+    background: var(--color-primary-bg-subtle);
 }
 
 .autocomplete-item.no-results {
-    color: #888;
+    color: var(--color-text-muted);
     cursor: default;
 }
 
@@ -487,14 +503,14 @@ button[type="submit"]:active {
 .autocomplete-item .species-sci {
     display: block;
     font-size: 0.85rem;
-    color: #666;
+    color: var(--color-text-secondary);
     font-style: italic;
 }
 
 .sci-name {
     font-weight: normal;
     font-style: italic;
-    color: #666;
+    color: var(--color-text-secondary);
 }
 
 /* Results controls - view toggle and filter */
@@ -511,7 +527,7 @@ button[type="submit"]:active {
     display: flex;
     gap: 0.25rem;
     padding: 0.25rem;
-    background: #f0f4ed;
+    background: var(--color-primary-bg);
     border-radius: 6px;
 }
 
@@ -521,20 +537,20 @@ button[type="submit"]:active {
     font-weight: 500;
     border: none;
     background: transparent;
-    color: #555;
+    color: var(--color-text-secondary);
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.15s ease;
 }
 
 .view-btn:hover {
-    color: #3d7a37;
+    color: var(--color-primary);
     background: rgba(255,255,255,0.5);
 }
 
 .view-btn.active {
     background: white;
-    color: #3d7a37;
+    color: var(--color-primary);
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
@@ -547,15 +563,15 @@ button[type="submit"]:active {
     width: 100%;
     padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
-    border: 1px solid #ddd;
+    border: 1px solid var(--color-border-light);
     border-radius: 6px;
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .filter-input:focus {
     outline: none;
-    border-color: #3d7a37;
-    box-shadow: 0 0 0 2px rgba(61, 122, 55, 0.15);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-focus);
 }
 
 /* Grouped table styles */
@@ -564,29 +580,24 @@ button[type="submit"]:active {
 }
 
 .grouped-table .species-group-row.expandable:hover {
-    background: #f0f4ed;
+    background: var(--color-primary-bg);
 }
 
 .expand-icon {
     display: inline-block;
     width: 1rem;
     font-size: 0.7rem;
-    color: #888;
+    color: var(--color-text-muted);
     margin-right: 0.25rem;
 }
 
-.expand-icon-spacer {
-    display: inline-block;
-    width: 1.25rem;
-}
-
 .locations-count {
-    color: #666;
+    color: var(--color-text-secondary);
     font-size: 0.9rem;
 }
 
 .species-detail-row {
-    background: #fafbf9;
+    background: var(--color-primary-bg-subtle);
 }
 
 .species-detail-row td {
@@ -608,12 +619,12 @@ footer {
     margin-top: 2rem;
     padding: 1rem 0;
     text-align: center;
-    color: #888;
+    color: var(--color-text-muted);
     font-size: 0.85rem;
 }
 
 footer a {
-    color: #3d7a37;
+    color: var(--color-primary);
 }
 
 /* Responsive */
