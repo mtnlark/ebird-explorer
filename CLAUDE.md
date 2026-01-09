@@ -72,6 +72,8 @@ Pick a hotspot, see what's been happening there.
 
 ```
 ebird-explorer/
+├── api/
+│   └── index.py             # Vercel serverless entrypoint
 ├── backend/
 │   ├── main.py              # FastAPI app, routes
 │   ├── ebird_client.py      # eBird API wrapper
@@ -80,14 +82,17 @@ ebird-explorer/
 │   │   ├── base.html
 │   │   ├── index.html
 │   │   ├── results.html
-│   │   └── hotspot.html
+│   │   ├── hotspot.html
+│   │   ├── hotspots.html
+│   │   └── species.html
 │   └── static/
 │       ├── style.css
-│       └── main.js
-├── .env                     # EBIRD_API_KEY goes here
+│       └── autocomplete.js  # Species name autocomplete
+├── .env                     # EBIRD_API_KEY goes here (see .env.example)
+├── .env.example             # Template for environment variables
 ├── geocode_cache.json       # Persistent geocoding cache (auto-generated)
-├── requirements.txt
-└── README.md
+├── vercel.json              # Vercel deployment config
+└── requirements.txt
 ```
 
 ## Key Implementation Notes
@@ -130,7 +135,7 @@ Once the core features work well:
 ## Getting Started
 
 1. Get an eBird API key: https://ebird.org/api/keygen
-2. Create `.env` file with `EBIRD_API_KEY=your_key_here`
-3. Install dependencies: `pip install fastapi uvicorn httpx python-dotenv jinja2`
+2. Copy `.env.example` to `.env` and add your API key
+3. Install dependencies: `pip install -r requirements.txt`
 4. Run: `uvicorn backend.main:app --reload`
-5. Start with the location search endpoint—it's the foundation for everything else
+5. Open http://localhost:8000 in your browser
