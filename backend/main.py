@@ -50,6 +50,14 @@ def format_obs_date(obs_dt: str) -> str:
 templates.env.filters["format_date"] = format_obs_date
 
 
+def add_formatted_dates(observations: list[dict]) -> list[dict]:
+    """Add pre-formatted date strings to observations for client-side rendering."""
+    for obs in observations:
+        if "obsDt" in obs:
+            obs["formattedDate"] = format_obs_date(obs["obsDt"])
+    return observations
+
+
 def miles_to_km(miles: float) -> int:
     """Convert miles to kilometers, rounded."""
     return round(miles * 1.60934)
@@ -89,6 +97,7 @@ async def search(
             dist_km=miles_to_km(radius),
             back=days,
         )
+        add_formatted_dates(observations)
     except Exception as e:
         return templates.TemplateResponse(
             "results.html",
@@ -141,6 +150,7 @@ async def notable(
             dist_km=miles_to_km(radius),
             back=days,
         )
+        add_formatted_dates(observations)
     except Exception as e:
         return templates.TemplateResponse(
             "results.html",

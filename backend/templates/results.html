@@ -59,30 +59,6 @@
         let filterText = '';
         let expandedSpecies = new Set();
 
-        function formatDate(obsDt) {
-            try {
-                const dt = new Date(obsDt.replace(' ', 'T'));
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const yesterday = new Date(today);
-                yesterday.setDate(yesterday.getDate() - 1);
-                const obsDate = new Date(dt);
-                obsDate.setHours(0, 0, 0, 0);
-
-                const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-
-                if (obsDate.getTime() === today.getTime()) {
-                    return `Today, ${timeStr}`;
-                } else if (obsDate.getTime() === yesterday.getTime()) {
-                    return `Yesterday, ${timeStr}`;
-                } else {
-                    return `${dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${timeStr}`;
-                }
-            } catch (e) {
-                return obsDt;
-            }
-        }
-
         function renderLocation(obs) {
             const locName = obs.locationPrivate
                 ? `<span class="loc-name">${obs.locName}</span>`
@@ -95,13 +71,14 @@
             for (const o of obs) {
                 const name = o.comName;
                 if (!groups[name]) {
-                    groups[name] = { name, observations: [], totalCount: 0, locations: new Set(), mostRecent: o.obsDt };
+                    groups[name] = { name, observations: [], totalCount: 0, locations: new Set(), mostRecent: o.obsDt, mostRecentFormatted: o.formattedDate };
                 }
                 groups[name].observations.push(o);
                 groups[name].totalCount += o.howMany || 1;
                 groups[name].locations.add(o.locName);
                 if (o.obsDt > groups[name].mostRecent) {
                     groups[name].mostRecent = o.obsDt;
+                    groups[name].mostRecentFormatted = o.formattedDate;
                 }
             }
             return Object.values(groups).sort((a, b) => b.mostRecent.localeCompare(a.mostRecent));
@@ -145,7 +122,7 @@
                     <td class="species-name">${o.comName}</td>
                     <td class="count">${o.howMany || 'X'}</td>
                     <td class="location">${renderLocation(o)}</td>
-                    <td class="date">${formatDate(o.obsDt)}</td>
+                    <td class="date">${o.formattedDate}</td>
                 </tr>`;
             }
 
@@ -178,7 +155,7 @@
                     </td>
                     <td class="count">${group.observations.length}</td>
                     <td class="locations-count">${group.locations.size} location${group.locations.size !== 1 ? 's' : ''}</td>
-                    <td class="date">${formatDate(group.mostRecent)}</td>
+                    <td class="date">${group.mostRecentFormatted}</td>
                 </tr>`;
 
                 if (isExpanded) {
@@ -187,7 +164,7 @@
                             <td class="species-name detail-indent"></td>
                             <td class="count">${o.howMany || 'X'}</td>
                             <td class="location">${renderLocation(o)}</td>
-                            <td class="date">${formatDate(o.obsDt)}</td>
+                            <td class="date">${o.formattedDate}</td>
                         </tr>`;
                     }
                 }
