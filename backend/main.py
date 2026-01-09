@@ -268,12 +268,18 @@ async def hotspot_detail(
 _taxonomy_cache: list[dict] | None = None
 
 
-@app.get("/api/taxonomy")
-async def api_taxonomy():
-    """API endpoint to get full species taxonomy for client-side fuzzy search."""
+async def get_taxonomy_cached() -> list[dict]:
+    """Get taxonomy from cache, fetching from eBird API if needed."""
     global _taxonomy_cache
     if _taxonomy_cache is None:
         _taxonomy_cache = await ebird.get_taxonomy()
+    return _taxonomy_cache
+
+
+@app.get("/api/taxonomy")
+async def api_taxonomy():
+    """API endpoint to get full species taxonomy for client-side fuzzy search."""
+    taxonomy = await get_taxonomy_cached()
 
     # Return simplified list for client-side use
     return [
@@ -282,23 +288,20 @@ async def api_taxonomy():
             "name": species["comName"],
             "sciName": species["sciName"],
         }
-        for species in _taxonomy_cache
+        for species in taxonomy
     ]
 
 
 @app.get("/api/species")
 async def api_species(q: str = Query(default="", min_length=0)):
     """API endpoint for species autocomplete (legacy, prefer /api/taxonomy for fuzzy)."""
-    global _taxonomy_cache
-    if _taxonomy_cache is None:
-        _taxonomy_cache = await ebird.get_taxonomy()
-
     if not q:
         return []
 
+    taxonomy = await get_taxonomy_cached()
     q_lower = q.lower()
     matches = []
-    for species in _taxonomy_cache:
+    for species in taxonomy:
         com_name = species.get("comName", "").lower()
         sci_name = species.get("sciName", "").lower()
         if q_lower in com_name or q_lower in sci_name:
@@ -346,12 +349,10 @@ async def species_search(
         )
 
     # Get species info from taxonomy cache
-    global _taxonomy_cache
-    if _taxonomy_cache is None:
-        _taxonomy_cache = await ebird.get_taxonomy()
+    taxonomy = await get_taxonomy_cached()
 
     species_info = None
-    for s in _taxonomy_cache:
+    for s in taxonomy:
         if s["speciesCode"] == species:
             species_info = s
             break
