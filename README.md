@@ -1,6 +1,6 @@
 # eBird Explorer
 
-A simple web tool for exploring eBird data. Quickly answer common birding questions like "what's been seen near me lately?" or "where was that interesting species reported?"
+I'm a birder who wanted a way to quickly answer common questions like "what's been seen near me lately?" or "where was that interesting species reported?" This is a simple web tool for exploring eBird data, including at a more granular ZIP code or town level (vs. county).
 
 ![eBird Explorer homepage](assets/homepage.png)
 
@@ -10,17 +10,6 @@ A simple web tool for exploring eBird data. Quickly answer common birding questi
 - **Notable Sightings**: Find rare and unusual birds in your area, filterable by date range
 - **Hotspot Explorer**: Browse hotspots near a location and see recent activity
 - **Species Lookup**: Search for where a specific species has been seen recently, with autocomplete
-
-### Screenshots
-
-Recent sightings in Charleston, SC:
-![Recent sightings](assets/recent.png)
-
-Notable sightings near Interlochen, MI:
-![Notable sightings](assets/notable.png)
-
-Hotspots near Catskill, NY:
-![Hotspots](assets/hotspots.png)
 
 ## Setup
 
@@ -51,6 +40,17 @@ Hotspots near Catskill, NY:
 ## Deployment
 
 The app is configured for deployment on Vercel. Push to your repo and connect it to Vercel, making sure to set the `EBIRD_API_KEY` environment variable.
+
+### Screenshots
+
+Recent sightings in Charleston, SC:
+![Recent sightings](assets/recent.png)
+
+Notable sightings near Interlochen, MI:
+![Notable sightings](assets/notable.png)
+
+Hotspots near Catskill, NY:
+![Hotspots](assets/hotspots.png)
 
 ## License
 
