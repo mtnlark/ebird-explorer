@@ -59,11 +59,23 @@
         let filterText = '';
         let expandedSpecies = new Set();
 
+        // Escape HTML special characters to prevent XSS
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function renderLocation(obs) {
-            const locName = obs.locationPrivate
-                ? `<span class="loc-name">${obs.locName}</span>`
-                : `<span class="loc-name"><a href="/hotspot/${obs.locId}" class="loc-link">${obs.locName}</a></span>`;
-            return `${locName}<a href="https://ebird.org/checklist/${obs.subId}" target="_blank" class="checklist-link" title="View checklist on eBird">📋</a>`;
+            const locName = escapeHtml(obs.locName);
+            const locHtml = obs.locationPrivate
+                ? `<span class="loc-name">${locName}</span>`
+                : `<span class="loc-name"><a href="/hotspot/${encodeURIComponent(obs.locId)}" class="loc-link">${locName}</a></span>`;
+            return `${locHtml}<a href="https://ebird.org/checklist/${encodeURIComponent(obs.subId)}" target="_blank" class="checklist-link" title="View checklist on eBird">📋</a>`;
         }
 
         function groupBySpecies(obs) {
@@ -119,10 +131,10 @@
 
             for (const o of obs) {
                 html += `<tr>
-                    <td class="species-name">${o.comName}</td>
+                    <td class="species-name">${escapeHtml(o.comName)}</td>
                     <td class="count">${o.howMany || 'X'}</td>
                     <td class="location">${renderLocation(o)}</td>
-                    <td class="date">${o.formattedDate}</td>
+                    <td class="date">${escapeHtml(o.formattedDate)}</td>
                 </tr>`;
             }
 
@@ -147,15 +159,16 @@
             for (const group of groups) {
                 const isExpanded = expandedSpecies.has(group.name);
                 const expandIcon = isExpanded ? '▼' : '▶';
+                const escapedName = escapeHtml(group.name);
 
-                html += `<tr class="species-group-row expandable" data-species="${group.name}">
+                html += `<tr class="species-group-row expandable" data-species="${escapedName}">
                     <td class="species-name">
                         <span class="expand-icon">${expandIcon}</span>
-                        ${group.name}
+                        ${escapedName}
                     </td>
                     <td class="count">${group.observations.length}</td>
                     <td class="locations-count">${group.locations.size} location${group.locations.size !== 1 ? 's' : ''}</td>
-                    <td class="date">${group.mostRecentFormatted}</td>
+                    <td class="date">${escapeHtml(group.mostRecentFormatted)}</td>
                 </tr>`;
 
                 if (isExpanded) {
@@ -164,7 +177,7 @@
                             <td class="species-name detail-indent"></td>
                             <td class="count">${o.howMany || 'X'}</td>
                             <td class="location">${renderLocation(o)}</td>
-                            <td class="date">${o.formattedDate}</td>
+                            <td class="date">${escapeHtml(o.formattedDate)}</td>
                         </tr>`;
                     }
                 }
