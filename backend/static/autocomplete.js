@@ -18,6 +18,17 @@
     let debounceTimer;
     let loading = false;
 
+    // Escape HTML special characters to prevent XSS
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     // Preload taxonomy on focus
     async function loadTaxonomy() {
         if (taxonomy || loading) return;
@@ -90,9 +101,9 @@
                 results.innerHTML = '<div class="autocomplete-item no-results">No species found</div>';
             } else {
                 results.innerHTML = matches.map(s =>
-                    `<div class="autocomplete-item" data-code="${s.code}" data-name="${s.name}">
-                        <span class="species-common">${s.name}</span>
-                        <span class="species-sci">${s.sciName}</span>
+                    `<div class="autocomplete-item" data-code="${escapeHtml(s.code)}" data-name="${escapeHtml(s.name)}">
+                        <span class="species-common">${escapeHtml(s.name)}</span>
+                        <span class="species-sci">${escapeHtml(s.sciName)}</span>
                     </div>`
                 ).join('');
             }

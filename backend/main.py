@@ -1,6 +1,11 @@
 """eBird Explorer - FastAPI application."""
 
-from datetime import datetime, date
+import asyncio
+import logging
+import os
+import re
+from contextlib import asynccontextmanager
+from datetime import datetime, date, timedelta
 from fastapi import FastAPI, Request, Form, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -10,7 +15,27 @@ from pathlib import Path
 from .geocoding import geocode
 from .ebird_client import ebird
 
-app = FastAPI(title="eBird Explorer")
+# Configure logging
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifespan - cleanup on shutdown."""
+    logger.info("Starting eBird Explorer application")
+    yield
+    # Cleanup: close the eBird API client's HTTP connection pool
+    logger.info("Shutting down - closing HTTP client pool")
+    await ebird.aclose()
+
+
+app = FastAPI(title="eBird Explorer", lifespan=lifespan)
 
 # Setup templates and static files
 BASE_DIR = Path(__file__).parent
@@ -29,18 +54,16 @@ def format_obs_date(obs_dt: str) -> str:
         today = date.today()
         obs_date = dt.date()
 
-        time_str = dt.strftime("%-I:%M %p").lstrip("0")
+        # Use %I and strip leading zero for cross-platform compatibility
+        time_str = dt.strftime("%I:%M %p").lstrip("0")
 
         if obs_date == today:
             return f"Today, {time_str}"
-        elif obs_date == today.replace(day=today.day - 1) if today.day > 1 else None:
+        elif obs_date == today - timedelta(days=1):
             return f"Yesterday, {time_str}"
         else:
-            # Check if it's yesterday (handle month boundaries)
-            from datetime import timedelta
-            if obs_date == today - timedelta(days=1):
-                return f"Yesterday, {time_str}"
-            return f"{dt.strftime('%b %-d')}, {time_str}"
+            day_str = str(dt.day)  # Avoid platform-specific %-d
+            return f"{dt.strftime('%b')} {day_str}, {time_str}"
     except (ValueError, IndexError):
         # Fallback if parsing fails
         return obs_dt
@@ -69,42 +92,49 @@ async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-@app.get("/search", response_class=HTMLResponse)
-async def search(
+async def _search_observations(
     request: Request,
-    location: str = Query(..., min_length=1),
-    radius: int = Query(default=10, ge=1, le=31),  # miles
-    days: int = Query(default=14, ge=1, le=30),
-):
-    """Search for recent observations near a location."""
-    # Geocode the location
+    location: str,
+    radius: int,
+    days: int,
+    notable: bool,
+) -> HTMLResponse:
+    """Common handler for search and notable endpoints."""
+    search_type = "notable" if notable else "recent"
+    logger.info(f"Search request: {search_type} observations near '{location}' ({radius}mi, {days}d)")
+
     geo = await geocode(location)
     if not geo:
+        logger.warning(f"Geocoding failed for location: {location}")
         return templates.TemplateResponse(
             "results.html",
             {
                 "request": request,
                 "error": f"Could not find location: {location}",
                 "location": location,
+                "notable": notable,
             },
         )
 
-    # Fetch observations from eBird
     try:
-        observations = await ebird.get_recent_observations(
+        fetch_func = ebird.get_notable_observations if notable else ebird.get_recent_observations
+        observations = await fetch_func(
             lat=geo["lat"],
             lng=geo["lng"],
             dist_km=miles_to_km(radius),
             back=days,
         )
         add_formatted_dates(observations)
+        logger.info(f"Found {len(observations)} {search_type} observations for '{location}'")
     except Exception as e:
+        logger.error(f"eBird API error for '{location}': {e}")
         return templates.TemplateResponse(
             "results.html",
             {
                 "request": request,
                 "error": f"eBird API error: {str(e)}",
                 "location": location,
+                "notable": notable,
             },
         )
 
@@ -118,9 +148,20 @@ async def search(
             "radius": radius,
             "days": days,
             "count": len(observations),
-            "notable": False,
+            "notable": notable,
         },
     )
+
+
+@app.get("/search", response_class=HTMLResponse)
+async def search(
+    request: Request,
+    location: str = Query(..., min_length=1),
+    radius: int = Query(default=10, ge=1, le=31),  # miles
+    days: int = Query(default=14, ge=1, le=30),
+):
+    """Search for recent observations near a location."""
+    return await _search_observations(request, location, radius, days, notable=False)
 
 
 @app.get("/notable", response_class=HTMLResponse)
@@ -131,50 +172,7 @@ async def notable(
     days: int = Query(default=14, ge=1, le=30),
 ):
     """Search for notable (rare/unusual) observations near a location."""
-    geo = await geocode(location)
-    if not geo:
-        return templates.TemplateResponse(
-            "results.html",
-            {
-                "request": request,
-                "error": f"Could not find location: {location}",
-                "location": location,
-                "notable": True,
-            },
-        )
-
-    try:
-        observations = await ebird.get_notable_observations(
-            lat=geo["lat"],
-            lng=geo["lng"],
-            dist_km=miles_to_km(radius),
-            back=days,
-        )
-        add_formatted_dates(observations)
-    except Exception as e:
-        return templates.TemplateResponse(
-            "results.html",
-            {
-                "request": request,
-                "error": f"eBird API error: {str(e)}",
-                "location": location,
-                "notable": True,
-            },
-        )
-
-    return templates.TemplateResponse(
-        "results.html",
-        {
-            "request": request,
-            "location": location,
-            "display_name": geo["display_name"],
-            "observations": observations,
-            "radius": radius,
-            "days": days,
-            "count": len(observations),
-            "notable": True,
-        },
-    )
+    return await _search_observations(request, location, radius, days, notable=True)
 
 
 @app.get("/hotspots", response_class=HTMLResponse)
@@ -224,6 +222,10 @@ async def hotspots(
     )
 
 
+# eBird location IDs follow the pattern L followed by digits (e.g., L123456)
+LOC_ID_PATTERN = re.compile(r"^L\d+$")
+
+
 @app.get("/hotspot/{loc_id}", response_class=HTMLResponse)
 async def hotspot_detail(
     request: Request,
@@ -231,8 +233,23 @@ async def hotspot_detail(
     days: int = Query(default=14, ge=1, le=30),
 ):
     """View recent observations at a specific hotspot."""
+    # Validate loc_id format to prevent potential API injection
+    if not LOC_ID_PATTERN.match(loc_id):
+        return templates.TemplateResponse(
+            "hotspot.html",
+            {
+                "request": request,
+                "error": "Invalid hotspot ID format",
+            },
+        )
+
     try:
-        info = await ebird.get_hotspot_info(loc_id)
+        # Fetch hotspot info and observations concurrently for better performance
+        info, observations = await asyncio.gather(
+            ebird.get_hotspot_info(loc_id),
+            ebird.get_hotspot_observations(loc_id, back=days),
+        )
+
         if not info:
             return templates.TemplateResponse(
                 "hotspot.html",
@@ -241,8 +258,6 @@ async def hotspot_detail(
                     "error": f"Hotspot not found: {loc_id}",
                 },
             )
-
-        observations = await ebird.get_hotspot_observations(loc_id, back=days)
     except Exception as e:
         return templates.TemplateResponse(
             "hotspot.html",

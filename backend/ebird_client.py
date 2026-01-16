@@ -1,13 +1,79 @@
 """eBird API client with async support."""
 
 import httpx
+import logging
 import os
+from typing import TypedDict, NotRequired
 from dotenv import load_dotenv
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
 EBIRD_API_KEY = os.getenv("EBIRD_API_KEY")
 EBIRD_BASE_URL = "https://api.ebird.org/v2"
+
+
+# Type definitions for eBird API responses
+class Observation(TypedDict):
+    """An eBird observation record."""
+
+    speciesCode: str
+    comName: str
+    sciName: str
+    locId: str
+    locName: str
+    obsDt: str
+    howMany: NotRequired[int]
+    lat: float
+    lng: float
+    obsValid: bool
+    obsReviewed: bool
+    locationPrivate: bool
+    subId: str
+
+
+class Hotspot(TypedDict):
+    """An eBird hotspot location."""
+
+    locId: str
+    locName: str
+    countryCode: str
+    subnational1Code: str
+    lat: float
+    lng: float
+    latestObsDt: NotRequired[str]
+    numSpeciesAllTime: NotRequired[int]
+
+
+class HotspotInfo(TypedDict):
+    """Detailed hotspot information."""
+
+    locId: str
+    name: str
+    latitude: float
+    longitude: float
+    countryCode: str
+    countryName: str
+    subnational1Code: str
+    subnational1Name: str
+    subnational2Code: NotRequired[str]
+    subnational2Name: NotRequired[str]
+    isHotspot: bool
+    hierarchicalName: str
+    numSpeciesAllTime: NotRequired[int]
+
+
+class Species(TypedDict):
+    """An eBird species from the taxonomy."""
+
+    speciesCode: str
+    comName: str
+    sciName: str
+    category: NotRequired[str]
+    order: NotRequired[str]
+    familyCode: NotRequired[str]
+    familyComName: NotRequired[str]
 
 
 class EBirdAPIError(Exception):
@@ -40,9 +106,27 @@ class EBirdClient:
         self.api_key = EBIRD_API_KEY
         if not self.api_key:
             raise ValueError("EBIRD_API_KEY not found in environment")
+        # Shared HTTP client for connection pooling
+        self._client: httpx.AsyncClient | None = None
 
     def _headers(self) -> dict:
         return {"X-eBirdApiToken": self.api_key}
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        """Get or create the shared HTTP client."""
+        if self._client is None:
+            self._client = httpx.AsyncClient(
+                base_url=EBIRD_BASE_URL,
+                headers=self._headers(),
+                timeout=15.0,
+            )
+        return self._client
+
+    async def aclose(self) -> None:
+        """Close the HTTP client. Call this on application shutdown."""
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
 
     def _handle_response(self, response: httpx.Response) -> None:
         """Check response status and raise appropriate exceptions."""
@@ -61,25 +145,29 @@ class EBirdClient:
         method: str,
         endpoint: str,
         params: dict | None = None,
-        timeout: float = 15.0,
+        timeout: float | None = None,
     ) -> httpx.Response:
         """Make an API request with proper error handling."""
+        client = await self._get_client()
+        logger.debug(f"eBird API request: {method} {endpoint}")
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.request(
-                    method,
-                    f"{EBIRD_BASE_URL}{endpoint}",
-                    params=params,
-                    headers=self._headers(),
-                    timeout=timeout,
-                )
-                self._handle_response(response)
-                return response
+            response = await client.request(
+                method,
+                endpoint,
+                params=params,
+                timeout=timeout,
+            )
+            self._handle_response(response)
+            logger.debug(f"eBird API response: {response.status_code}")
+            return response
         except httpx.TimeoutException:
+            logger.warning(f"eBird API timeout: {endpoint}")
             raise EBirdTimeoutError("eBird API request timed out - the server may be slow")
         except httpx.ConnectError:
+            logger.error(f"eBird API connection error: {endpoint}")
             raise EBirdNetworkError("Could not connect to eBird API - check your internet connection")
         except httpx.RequestError as e:
+            logger.error(f"eBird API request error: {endpoint} - {e}")
             raise EBirdNetworkError(f"Network error: {e}")
 
     async def get_recent_observations(
@@ -88,7 +176,7 @@ class EBirdClient:
         lng: float,
         dist_km: int = 16,  # ~10 miles
         back: int = 14,  # days
-    ) -> list[dict]:
+    ) -> list[Observation]:
         """
         Get recent observations near a location.
 
@@ -120,7 +208,7 @@ class EBirdClient:
         lng: float,
         dist_km: int = 16,
         back: int = 14,
-    ) -> list[dict]:
+    ) -> list[Observation]:
         """Get notable (rare/unusual) observations near a location."""
         response = await self._request(
             "GET",
@@ -139,7 +227,7 @@ class EBirdClient:
         lat: float,
         lng: float,
         dist_km: int = 16,
-    ) -> list[dict]:
+    ) -> list[Hotspot]:
         """Get birding hotspots near a location."""
         response = await self._request(
             "GET",
@@ -157,7 +245,7 @@ class EBirdClient:
         self,
         loc_id: str,
         back: int = 14,
-    ) -> list[dict]:
+    ) -> list[Observation]:
         """Get recent observations at a specific hotspot."""
         response = await self._request(
             "GET",
@@ -166,20 +254,27 @@ class EBirdClient:
         )
         return response.json()
 
-    async def get_hotspot_info(self, loc_id: str) -> dict | None:
-        """Get info about a specific hotspot."""
+    async def get_hotspot_info(self, loc_id: str) -> HotspotInfo | None:
+        """Get info about a specific hotspot. Returns None if not found."""
+        client = await self._get_client()
         try:
-            response = await self._request(
+            response = await client.request(
                 "GET",
                 f"/ref/hotspot/info/{loc_id}",
             )
-            return response.json()
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
+            # Handle 404 specially - return None instead of raising
+            if response.status_code == 404:
                 return None
-            raise
+            self._handle_response(response)
+            return response.json()
+        except httpx.TimeoutException:
+            raise EBirdTimeoutError("eBird API request timed out - the server may be slow")
+        except httpx.ConnectError:
+            raise EBirdNetworkError("Could not connect to eBird API - check your internet connection")
+        except httpx.RequestError as e:
+            raise EBirdNetworkError(f"Network error: {e}")
 
-    async def get_taxonomy(self) -> list[dict]:
+    async def get_taxonomy(self) -> list[Species]:
         """Get eBird taxonomy (species list) for autocomplete."""
         response = await self._request(
             "GET",
@@ -196,7 +291,7 @@ class EBirdClient:
         lng: float,
         dist_km: int = 50,
         back: int = 14,
-    ) -> list[dict]:
+    ) -> list[Observation]:
         """Get nearest recent observations of a specific species."""
         response = await self._request(
             "GET",
