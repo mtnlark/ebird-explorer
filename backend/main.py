@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from .geocoding import geocode
+from .geocoding import geocode, close_geocoding_client, GeocodingError
 from .ebird_client import ebird
 
 # Configure logging
@@ -30,9 +30,10 @@ async def lifespan(app: FastAPI):
     """Manage application lifespan - cleanup on shutdown."""
     logger.info("Starting eBird Explorer application")
     yield
-    # Cleanup: close the eBird API client's HTTP connection pool
-    logger.info("Shutting down - closing HTTP client pool")
+    # Cleanup: close HTTP connection pools
+    logger.info("Shutting down - closing HTTP client pools")
     await ebird.aclose()
+    await close_geocoding_client()
 
 
 app = FastAPI(title="eBird Explorer", lifespan=lifespan)
@@ -103,7 +104,20 @@ async def _search_observations(
     search_type = "notable" if notable else "recent"
     logger.info(f"Search request: {search_type} observations near '{location}' ({radius}mi, {days}d)")
 
-    geo = await geocode(location)
+    try:
+        geo = await geocode(location)
+    except GeocodingError as e:
+        logger.error(f"Geocoding error for '{location}': {e}")
+        return templates.TemplateResponse(
+            "results.html",
+            {
+                "request": request,
+                "error": str(e),
+                "location": location,
+                "notable": notable,
+            },
+        )
+
     if not geo:
         logger.warning(f"Geocoding failed for location: {location}")
         return templates.TemplateResponse(
@@ -182,7 +196,18 @@ async def hotspots(
     radius: int = Query(default=10, ge=1, le=31),
 ):
     """Find birding hotspots near a location."""
-    geo = await geocode(location)
+    try:
+        geo = await geocode(location)
+    except GeocodingError as e:
+        return templates.TemplateResponse(
+            "hotspots.html",
+            {
+                "request": request,
+                "error": str(e),
+                "location": location,
+            },
+        )
+
     if not geo:
         return templates.TemplateResponse(
             "hotspots.html",
@@ -224,6 +249,9 @@ async def hotspots(
 
 # eBird location IDs follow the pattern L followed by digits (e.g., L123456)
 LOC_ID_PATTERN = re.compile(r"^L\d+$")
+
+# eBird species codes are 4-6 lowercase letters (e.g., "baleag", "amecro")
+SPECIES_CODE_PATTERN = re.compile(r"^[a-z]{4,6}[a-z0-9]{0,2}$")
 
 
 @app.get("/hotspot/{loc_id}", response_class=HTMLResponse)
@@ -351,7 +379,19 @@ async def species_search(
         )
 
     # Geocode the location
-    geo = await geocode(location)
+    try:
+        geo = await geocode(location)
+    except GeocodingError as e:
+        return templates.TemplateResponse(
+            "species.html",
+            {
+                "request": request,
+                "error": str(e),
+                "species": species,
+                "location": location,
+            },
+        )
+
     if not geo:
         return templates.TemplateResponse(
             "species.html",
@@ -359,6 +399,17 @@ async def species_search(
                 "request": request,
                 "error": f"Could not find location: {location}",
                 "species": species,
+                "location": location,
+            },
+        )
+
+    # Validate species code format to prevent API injection
+    if not SPECIES_CODE_PATTERN.match(species):
+        return templates.TemplateResponse(
+            "species.html",
+            {
+                "request": request,
+                "error": "Invalid species code format",
                 "location": location,
             },
         )

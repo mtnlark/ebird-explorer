@@ -2,6 +2,8 @@
 
 {% block title %}{% if notable %}Notable{% else %}Recent{% endif %} sightings near {{ location }} - eBird Explorer{% endblock %}
 
+{% block body_attrs %}data-notable="{{ 'true' if notable else 'false' }}"{% endblock %}
+
 {% block content %}
 <section class="results-section">
     <div class="results-header">
@@ -37,195 +39,16 @@
         </div>
         {% endif %}
         <div class="filter-box">
-            <input type="text" id="species-filter" placeholder="Filter species..." class="filter-input">
+            <label for="species-filter" class="visually-hidden">Filter species</label>
+            <input type="text" id="species-filter" placeholder="Filter species..." class="filter-input" aria-label="Filter species by name">
         </div>
     </div>
 
     <div id="results-container"></div>
 
     <script id="observations-data" type="application/json">{{ observations | tojson }}</script>
-    <script>
-    (function() {
-        const observations = JSON.parse(document.getElementById('observations-data').textContent);
-        const container = document.getElementById('results-container');
-        const filterInput = document.getElementById('species-filter');
-        const btnGrouped = document.getElementById('view-grouped');
-        const btnAll = document.getElementById('view-all');
-        const isNotable = {{ 'true' if notable else 'false' }};
-
-        // For Recent view, always show flat list (API returns 1 record per species)
-        // For Notable view, default to grouped (API returns multiple records per species)
-        let viewMode = isNotable ? 'grouped' : 'all';
-        let filterText = '';
-        let expandedSpecies = new Set();
-
-        // Escape HTML special characters to prevent XSS
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
-
-        function renderLocation(obs) {
-            const locName = escapeHtml(obs.locName);
-            const locHtml = obs.locationPrivate
-                ? `<span class="loc-name">${locName}</span>`
-                : `<span class="loc-name"><a href="/hotspot/${encodeURIComponent(obs.locId)}" class="loc-link">${locName}</a></span>`;
-            return `${locHtml}<a href="https://ebird.org/checklist/${encodeURIComponent(obs.subId)}" target="_blank" class="checklist-link" title="View checklist on eBird">📋</a>`;
-        }
-
-        function groupBySpecies(obs) {
-            const groups = {};
-            for (const o of obs) {
-                const name = o.comName;
-                if (!groups[name]) {
-                    groups[name] = { name, observations: [], totalCount: 0, locations: new Set(), mostRecent: o.obsDt, mostRecentFormatted: o.formattedDate };
-                }
-                groups[name].observations.push(o);
-                groups[name].totalCount += o.howMany || 1;
-                groups[name].locations.add(o.locName);
-                if (o.obsDt > groups[name].mostRecent) {
-                    groups[name].mostRecent = o.obsDt;
-                    groups[name].mostRecentFormatted = o.formattedDate;
-                }
-            }
-            return Object.values(groups).sort((a, b) => b.mostRecent.localeCompare(a.mostRecent));
-        }
-
-        function filterObservations(obs) {
-            if (!filterText) return obs;
-            const q = filterText.toLowerCase();
-            return obs.filter(o => o.comName.toLowerCase().includes(q));
-        }
-
-        function render() {
-            const filtered = filterObservations(observations);
-
-            if (filtered.length === 0) {
-                container.innerHTML = '<p class="no-results">No matching species found.</p>';
-                return;
-            }
-
-            if (viewMode === 'all') {
-                renderFlatList(filtered);
-            } else {
-                renderGroupedList(filtered);
-            }
-        }
-
-        function renderFlatList(obs) {
-            let html = `<table class="observations-table">
-                <thead>
-                    <tr>
-                        <th>Species</th>
-                        <th>Count</th>
-                        <th>Location</th>
-                        <th>Date</th>
-                    </tr>
-                </thead>
-                <tbody>`;
-
-            for (const o of obs) {
-                html += `<tr>
-                    <td class="species-name">${escapeHtml(o.comName)}</td>
-                    <td class="count">${o.howMany || 'X'}</td>
-                    <td class="location">${renderLocation(o)}</td>
-                    <td class="date">${escapeHtml(o.formattedDate)}</td>
-                </tr>`;
-            }
-
-            html += '</tbody></table>';
-            container.innerHTML = html;
-        }
-
-        function renderGroupedList(obs) {
-            const groups = groupBySpecies(obs);
-
-            let html = `<table class="observations-table grouped-table">
-                <thead>
-                    <tr>
-                        <th>Species</th>
-                        <th>Sightings</th>
-                        <th>Locations</th>
-                        <th>Most Recent</th>
-                    </tr>
-                </thead>
-                <tbody>`;
-
-            for (const group of groups) {
-                const isExpanded = expandedSpecies.has(group.name);
-                const expandIcon = isExpanded ? '▼' : '▶';
-                const escapedName = escapeHtml(group.name);
-
-                html += `<tr class="species-group-row expandable" data-species="${escapedName}">
-                    <td class="species-name">
-                        <span class="expand-icon">${expandIcon}</span>
-                        ${escapedName}
-                    </td>
-                    <td class="count">${group.observations.length}</td>
-                    <td class="locations-count">${group.locations.size} location${group.locations.size !== 1 ? 's' : ''}</td>
-                    <td class="date">${escapeHtml(group.mostRecentFormatted)}</td>
-                </tr>`;
-
-                if (isExpanded) {
-                    for (const o of group.observations) {
-                        html += `<tr class="species-detail-row">
-                            <td class="species-name detail-indent"></td>
-                            <td class="count">${o.howMany || 'X'}</td>
-                            <td class="location">${renderLocation(o)}</td>
-                            <td class="date">${escapeHtml(o.formattedDate)}</td>
-                        </tr>`;
-                    }
-                }
-            }
-
-            html += '</tbody></table>';
-            container.innerHTML = html;
-
-            // Add click handlers for expandable rows
-            container.querySelectorAll('.species-group-row.expandable').forEach(row => {
-                row.addEventListener('click', () => {
-                    const species = row.dataset.species;
-                    if (expandedSpecies.has(species)) {
-                        expandedSpecies.delete(species);
-                    } else {
-                        expandedSpecies.add(species);
-                    }
-                    render();
-                });
-            });
-        }
-
-        // Event listeners for toggle buttons (only present for Notable view)
-        if (btnGrouped && btnAll) {
-            btnGrouped.addEventListener('click', () => {
-                viewMode = 'grouped';
-                btnGrouped.classList.add('active');
-                btnAll.classList.remove('active');
-                render();
-            });
-
-            btnAll.addEventListener('click', () => {
-                viewMode = 'all';
-                btnAll.classList.add('active');
-                btnGrouped.classList.remove('active');
-                render();
-            });
-        }
-
-        filterInput.addEventListener('input', (e) => {
-            filterText = e.target.value.trim();
-            render();
-        });
-
-        // Initial render
-        render();
-    })();
-    </script>
+    <script src="/static/utils.js"></script>
+    <script src="/static/results.js"></script>
     {% elif not error %}
     <p class="no-results">No observations found for this area and time period.</p>
     {% endif %}

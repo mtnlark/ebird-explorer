@@ -1,6 +1,6 @@
 /**
  * Species autocomplete with fuzzy search using Fuse.js
- * Requires Fuse.js to be loaded first.
+ * Requires: utils.js (escapeHtml), Fuse.js
  *
  * Expects these elements in the DOM:
  * - #species-input: text input for typing
@@ -8,6 +8,8 @@
  * - #autocomplete-results: container for dropdown results
  */
 (function() {
+    'use strict';
+
     const input = document.getElementById('species-input');
     const hidden = document.getElementById('species');
     const results = document.getElementById('autocomplete-results');
@@ -17,22 +19,22 @@
     let fuse = null;
     let debounceTimer;
     let loading = false;
+    let selectedIndex = -1;
+    let currentMatches = [];
 
-    // Escape HTML special characters to prevent XSS
-    function escapeHtml(str) {
-        if (!str) return '';
-        return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    }
+    // Set up ARIA attributes
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-expanded', 'false');
+    input.setAttribute('aria-controls', 'autocomplete-results');
+    results.setAttribute('role', 'listbox');
+    results.setAttribute('aria-label', 'Species suggestions');
 
     // Preload taxonomy on focus
     async function loadTaxonomy() {
         if (taxonomy || loading) return;
         loading = true;
+        input.setAttribute('aria-busy', 'true');
         try {
             const response = await fetch('/api/taxonomy');
             taxonomy = await response.json();
@@ -47,6 +49,7 @@
             console.error('Failed to load taxonomy:', e);
         }
         loading = false;
+        input.setAttribute('aria-busy', 'false');
     }
 
     input.addEventListener('focus', loadTaxonomy);
@@ -73,20 +76,87 @@
         return combined;
     }
 
+    function renderResults(matches) {
+        currentMatches = matches;
+        selectedIndex = -1;
+
+        if (matches.length === 0) {
+            results.innerHTML = '<div class="autocomplete-item no-results" role="status">No species found</div>';
+            input.setAttribute('aria-expanded', 'true');
+        } else {
+            results.innerHTML = matches.map((s, index) =>
+                `<div class="autocomplete-item"
+                     id="autocomplete-option-${index}"
+                     role="option"
+                     aria-selected="false"
+                     data-code="${escapeHtml(s.code)}"
+                     data-name="${escapeHtml(s.name)}">
+                    <span class="species-common">${escapeHtml(s.name)}</span>
+                    <span class="species-sci">${escapeHtml(s.sciName)}</span>
+                </div>`
+            ).join('');
+            input.setAttribute('aria-expanded', 'true');
+        }
+        results.style.display = 'block';
+    }
+
+    function hideResults() {
+        results.style.display = 'none';
+        results.innerHTML = '';
+        input.setAttribute('aria-expanded', 'false');
+        input.removeAttribute('aria-activedescendant');
+        selectedIndex = -1;
+        currentMatches = [];
+    }
+
+    function selectItem(index) {
+        // Remove previous selection
+        const prevSelected = results.querySelector('[aria-selected="true"]');
+        if (prevSelected) {
+            prevSelected.setAttribute('aria-selected', 'false');
+            prevSelected.classList.remove('selected');
+        }
+
+        // Select new item
+        if (index >= 0 && index < currentMatches.length) {
+            selectedIndex = index;
+            const item = document.getElementById(`autocomplete-option-${index}`);
+            if (item) {
+                item.setAttribute('aria-selected', 'true');
+                item.classList.add('selected');
+                input.setAttribute('aria-activedescendant', `autocomplete-option-${index}`);
+                // Scroll into view if needed
+                item.scrollIntoView({ block: 'nearest' });
+            }
+        } else {
+            selectedIndex = -1;
+            input.removeAttribute('aria-activedescendant');
+        }
+    }
+
+    function confirmSelection() {
+        if (selectedIndex >= 0 && selectedIndex < currentMatches.length) {
+            const match = currentMatches[selectedIndex];
+            input.value = match.name;
+            hidden.value = match.code;
+            hideResults();
+        }
+    }
+
     input.addEventListener('input', function() {
         clearTimeout(debounceTimer);
         const q = this.value.trim();
 
         if (q.length < 2) {
-            results.innerHTML = '';
-            results.style.display = 'none';
+            hideResults();
             return;
         }
 
         debounceTimer = setTimeout(() => {
             if (!taxonomy) {
-                results.innerHTML = '<div class="autocomplete-item no-results">Loading species list...</div>';
+                results.innerHTML = '<div class="autocomplete-item no-results" role="status" aria-live="polite"><span class="loading-text"><span class="loading-spinner"></span>Loading species list...</span></div>';
                 results.style.display = 'block';
+                input.setAttribute('aria-expanded', 'true');
                 loadTaxonomy().then(() => {
                     if (input.value.trim().length >= 2) {
                         input.dispatchEvent(new Event('input'));
@@ -96,19 +166,38 @@
             }
 
             const matches = search(q);
-
-            if (matches.length === 0) {
-                results.innerHTML = '<div class="autocomplete-item no-results">No species found</div>';
-            } else {
-                results.innerHTML = matches.map(s =>
-                    `<div class="autocomplete-item" data-code="${escapeHtml(s.code)}" data-name="${escapeHtml(s.name)}">
-                        <span class="species-common">${escapeHtml(s.name)}</span>
-                        <span class="species-sci">${escapeHtml(s.sciName)}</span>
-                    </div>`
-                ).join('');
-            }
-            results.style.display = 'block';
+            renderResults(matches);
         }, 150);
+    });
+
+    // Keyboard navigation
+    input.addEventListener('keydown', function(e) {
+        if (results.style.display !== 'block' || currentMatches.length === 0) return;
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                selectItem(selectedIndex < currentMatches.length - 1 ? selectedIndex + 1 : 0);
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                selectItem(selectedIndex > 0 ? selectedIndex - 1 : currentMatches.length - 1);
+                break;
+            case 'Enter':
+                if (selectedIndex >= 0) {
+                    e.preventDefault();
+                    confirmSelection();
+                }
+                break;
+            case 'Escape':
+                e.preventDefault();
+                hideResults();
+                break;
+            case 'Tab':
+                // Allow natural tab behavior but close results
+                hideResults();
+                break;
+        }
     });
 
     results.addEventListener('click', function(e) {
@@ -116,13 +205,22 @@
         if (item && item.dataset.code) {
             input.value = item.dataset.name;
             hidden.value = item.dataset.code;
-            results.style.display = 'none';
+            hideResults();
+        }
+    });
+
+    // Mouse hover updates selection for visual feedback
+    results.addEventListener('mouseover', function(e) {
+        const item = e.target.closest('.autocomplete-item');
+        if (item && item.dataset.code) {
+            const index = Array.from(results.querySelectorAll('.autocomplete-item[data-code]')).indexOf(item);
+            if (index >= 0) selectItem(index);
         }
     });
 
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.autocomplete-wrapper')) {
-            results.style.display = 'none';
+            hideResults();
         }
     });
 })();

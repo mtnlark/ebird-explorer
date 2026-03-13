@@ -93,28 +93,30 @@ class TestGeocode:
     @pytest.mark.asyncio
     async def test_returns_none_when_not_found(self):
         """Test that None is returned when location not found."""
-        from backend.geocoding import geocode
+        from backend.geocoding import GeocodingClient
+
+        client = GeocodingClient()
 
         with patch("backend.geocoding._load_cache", return_value={}):
-            with patch("httpx.AsyncClient") as MockClient:
+            with patch.object(client, "_get_client") as mock_get_client:
                 mock_response = MagicMock()
                 mock_response.json.return_value = []  # Empty results
                 mock_response.raise_for_status = MagicMock()
 
-                mock_client = AsyncMock()
-                mock_client.get = AsyncMock(return_value=mock_response)
-                mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-                mock_client.__aexit__ = AsyncMock()
-                MockClient.return_value = mock_client
+                mock_http = AsyncMock()
+                mock_http.get = AsyncMock(return_value=mock_response)
+                mock_get_client.return_value = mock_http
 
-                result = await geocode("NonexistentPlace12345")
+                result = await client.geocode("NonexistentPlace12345")
 
                 assert result is None
 
     @pytest.mark.asyncio
     async def test_us_zip_appends_usa(self):
         """Test that US ZIP codes get USA appended to query."""
-        from backend.geocoding import geocode
+        from backend.geocoding import GeocodingClient
+
+        client = GeocodingClient()
 
         api_response = [{
             "lat": "40.7484",
@@ -124,21 +126,19 @@ class TestGeocode:
 
         with patch("backend.geocoding._load_cache", return_value={}):
             with patch("backend.geocoding._save_cache"):
-                with patch("httpx.AsyncClient") as MockClient:
+                with patch.object(client, "_get_client") as mock_get_client:
                     mock_response = MagicMock()
                     mock_response.json.return_value = api_response
                     mock_response.raise_for_status = MagicMock()
 
-                    mock_client = AsyncMock()
-                    mock_client.get = AsyncMock(return_value=mock_response)
-                    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-                    mock_client.__aexit__ = AsyncMock()
-                    MockClient.return_value = mock_client
+                    mock_http = AsyncMock()
+                    mock_http.get = AsyncMock(return_value=mock_response)
+                    mock_get_client.return_value = mock_http
 
-                    await geocode("10001")
+                    await client.geocode("10001")
 
                     # Check that the query included ", USA"
-                    call_args = mock_client.get.call_args
+                    call_args = mock_http.get.call_args
                     assert "10001, USA" in call_args[1]["params"]["q"]
 
     @pytest.mark.asyncio
@@ -202,3 +202,115 @@ class TestCachePersistence:
 
             # Should not raise
             _save_cache({"test": "data"})
+
+
+class TestGeocodingErrorHandling:
+    """Tests for geocoding error handling."""
+
+    @pytest.mark.asyncio
+    async def test_timeout_raises_geocoding_timeout_error(self):
+        """Test that httpx timeout raises GeocodingTimeoutError."""
+        import httpx
+        from backend.geocoding import GeocodingClient, GeocodingTimeoutError
+
+        client = GeocodingClient()
+
+        with patch("backend.geocoding._load_cache", return_value={}):
+            with patch.object(client, "_get_client") as mock_get_client:
+                mock_http = AsyncMock()
+                mock_http.get = AsyncMock(side_effect=httpx.TimeoutException("timeout"))
+                mock_get_client.return_value = mock_http
+
+                with pytest.raises(GeocodingTimeoutError, match="timed out"):
+                    await client.geocode("New York")
+
+    @pytest.mark.asyncio
+    async def test_connect_error_raises_geocoding_network_error(self):
+        """Test that httpx connect error raises GeocodingNetworkError."""
+        import httpx
+        from backend.geocoding import GeocodingClient, GeocodingNetworkError
+
+        client = GeocodingClient()
+
+        with patch("backend.geocoding._load_cache", return_value={}):
+            with patch.object(client, "_get_client") as mock_get_client:
+                mock_http = AsyncMock()
+                mock_http.get = AsyncMock(side_effect=httpx.ConnectError("failed"))
+                mock_get_client.return_value = mock_http
+
+                with pytest.raises(GeocodingNetworkError, match="Could not connect"):
+                    await client.geocode("New York")
+
+    @pytest.mark.asyncio
+    async def test_request_error_raises_geocoding_network_error(self):
+        """Test that generic httpx request error raises GeocodingNetworkError."""
+        import httpx
+        from backend.geocoding import GeocodingClient, GeocodingNetworkError
+
+        client = GeocodingClient()
+
+        with patch("backend.geocoding._load_cache", return_value={}):
+            with patch.object(client, "_get_client") as mock_get_client:
+                mock_http = AsyncMock()
+                mock_http.get = AsyncMock(side_effect=httpx.RequestError("unknown"))
+                mock_get_client.return_value = mock_http
+
+                with pytest.raises(GeocodingNetworkError, match="network error"):
+                    await client.geocode("New York")
+
+
+class TestGeocodingClientPooling:
+    """Tests for GeocodingClient connection pooling."""
+
+    @pytest.mark.asyncio
+    async def test_client_reuses_http_client(self):
+        """Test that the same HTTP client is reused across calls."""
+        from backend.geocoding import GeocodingClient
+
+        client = GeocodingClient()
+        assert client._client is None
+
+        with patch("httpx.AsyncClient") as MockAsyncClient:
+            mock_http = AsyncMock()
+            MockAsyncClient.return_value = mock_http
+
+            # Get client twice
+            client1 = await client._get_client()
+            client2 = await client._get_client()
+
+            # Should be the same instance
+            assert client1 is client2
+            # AsyncClient should only be instantiated once
+            MockAsyncClient.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_aclose_closes_client(self):
+        """Test that aclose properly closes the HTTP client."""
+        from backend.geocoding import GeocodingClient
+
+        client = GeocodingClient()
+
+        with patch("httpx.AsyncClient") as MockAsyncClient:
+            mock_http = AsyncMock()
+            mock_http.aclose = AsyncMock()
+            MockAsyncClient.return_value = mock_http
+
+            # Initialize the client
+            await client._get_client()
+            assert client._client is not None
+
+            # Close it
+            await client.aclose()
+
+            mock_http.aclose.assert_called_once()
+            assert client._client is None
+
+    @pytest.mark.asyncio
+    async def test_aclose_handles_uninitialized_client(self):
+        """Test that aclose works even if client was never initialized."""
+        from backend.geocoding import GeocodingClient
+
+        client = GeocodingClient()
+        # Should not raise
+        await client.aclose()
+        assert client._client is None

@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Find recent bird sightings near you. Search by location to discover what birds have been spotted, explore birding hotspots, and track specific species.">
     <title>{% block title %}eBird Explorer{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body {% block body_attrs %}{% endblock %}>
     <header>
         <h1><a href="/">eBird Explorer</a></h1>
     </header>
@@ -19,5 +20,6 @@
     <footer>
         <p>Data from <a href="https://ebird.org" target="_blank">eBird</a></p>
     </footer>
+    <script src="/static/forms.js"></script>
 </body>
 </html>

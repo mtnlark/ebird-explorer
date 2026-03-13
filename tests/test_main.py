@@ -1,8 +1,10 @@
 """Tests for backend/main.py - FastAPI routes and utilities."""
 
 from datetime import date, timedelta
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 import pytest
+
+from backend.geocoding import GeocodingNetworkError, GeocodingTimeoutError
 
 
 class TestFormatObsDate:
@@ -254,3 +256,113 @@ class TestHomeRoute:
         assert response.status_code == 200
         assert "eBird Explorer" in response.text
         assert "Recent sightings" in response.text
+
+
+class TestSpeciesCodeValidation:
+    """Tests for species code validation pattern."""
+
+    def test_valid_species_codes(self):
+        """Test that valid species codes match the pattern."""
+        from backend.main import SPECIES_CODE_PATTERN
+
+        valid_codes = ["baleag", "amecro", "rewbla", "yerwar", "cangoo"]
+        for code in valid_codes:
+            assert SPECIES_CODE_PATTERN.match(code), f"{code} should be valid"
+
+    def test_species_codes_with_numbers(self):
+        """Test that species codes with trailing numbers are valid."""
+        from backend.main import SPECIES_CODE_PATTERN
+
+        # Some eBird codes include numbers for subspecies/hybrids
+        assert SPECIES_CODE_PATTERN.match("yerwar1")
+        assert SPECIES_CODE_PATTERN.match("mallar3")
+
+    def test_invalid_species_codes(self):
+        """Test that invalid species codes don't match."""
+        from backend.main import SPECIES_CODE_PATTERN
+
+        invalid_codes = [
+            "BALEAG",  # Uppercase
+            "bal",     # Too short
+            "bald eagle",  # Contains space
+            "bal-eag",  # Contains hyphen
+            "123456",  # All numbers
+            "",        # Empty
+        ]
+        for code in invalid_codes:
+            assert not SPECIES_CODE_PATTERN.match(code), f"{code} should be invalid"
+
+
+class TestSpeciesRoute:
+    """Tests for the /species endpoint."""
+
+    def test_species_search_success(self, client, mock_geocode, mock_ebird_client):
+        """Test successful species search."""
+        response = client.get("/species?species=baleag&location=New+York&radius=25&days=14")
+
+        assert response.status_code == 200
+        assert "Bald Eagle" in response.text
+
+    def test_species_search_invalid_code(self, client, mock_geocode):
+        """Test that invalid species code shows error."""
+        response = client.get("/species?species=INVALID&location=New+York")
+
+        assert response.status_code == 200
+        assert "Invalid species code" in response.text
+
+    def test_species_search_code_with_special_chars(self, client, mock_geocode):
+        """Test that species code with special characters is rejected."""
+        response = client.get("/species?species=bal-eag&location=New+York")
+
+        assert response.status_code == 200
+        assert "Invalid species code" in response.text
+
+    def test_species_search_location_not_found(self, client, mock_geocode_not_found, mock_ebird_client):
+        """Test species search with unknown location shows error."""
+        response = client.get("/species?species=baleag&location=NonexistentPlace")
+
+        assert response.status_code == 200
+        assert "Could not find location" in response.text
+
+    def test_species_form_page(self, client):
+        """Test species search form page loads."""
+        response = client.get("/species")
+
+        assert response.status_code == 200
+        assert "Where has a species been seen" in response.text
+
+
+class TestGeocodingErrorHandling:
+    """Tests for geocoding error handling in routes."""
+
+    def test_search_geocoding_timeout(self, client):
+        """Test that geocoding timeout shows friendly error."""
+        with patch("backend.main.geocode", side_effect=GeocodingTimeoutError("timeout")):
+            response = client.get("/search?location=New+York")
+
+            assert response.status_code == 200
+            assert "timeout" in response.text.lower() or "timed out" in response.text.lower()
+
+    def test_search_geocoding_network_error(self, client):
+        """Test that geocoding network error shows friendly error."""
+        with patch("backend.main.geocode", side_effect=GeocodingNetworkError("network error")):
+            response = client.get("/search?location=New+York")
+
+            assert response.status_code == 200
+            assert "network" in response.text.lower() or "connect" in response.text.lower()
+
+    def test_hotspots_geocoding_error(self, client):
+        """Test that hotspots route handles geocoding errors."""
+        with patch("backend.main.geocode", side_effect=GeocodingTimeoutError("timeout")):
+            response = client.get("/hotspots?location=New+York")
+
+            assert response.status_code == 200
+            assert "timeout" in response.text.lower() or "timed out" in response.text.lower()
+
+    def test_species_geocoding_error(self, client, mock_ebird_client):
+        """Test that species route handles geocoding errors."""
+        with patch("backend.main.geocode", side_effect=GeocodingNetworkError("cannot connect")):
+            response = client.get("/species?species=baleag&location=New+York")
+
+            assert response.status_code == 200
+            assert "connect" in response.text.lower() or "network" in response.text.lower()

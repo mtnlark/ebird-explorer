@@ -29,9 +29,9 @@
     </div>
 
     {% if hotspots %}
-    <div class="hotspot-list">
+    <nav class="hotspot-list" aria-label="Birding hotspots">
         {% for hs in hotspots %}
-        <a href="/hotspot/{{ hs.locId }}" class="hotspot-card">
+        <a href="/hotspot/{{ hs.locId }}" class="hotspot-card" aria-label="{{ hs.locName }}{% if hs.numSpeciesAllTime %}, {{ hs.numSpeciesAllTime }} species all time{% endif %}">
             <div class="hotspot-name">{{ hs.locName }}</div>
             <div class="hotspot-meta">
                 {% if hs.numSpeciesAllTime %}
@@ -43,7 +43,7 @@
             </div>
         </a>
         {% endfor %}
-    </div>
+    </nav>
     {% elif not error %}
     <p class="no-results">No hotspots found in this area.</p>
     {% endif %}

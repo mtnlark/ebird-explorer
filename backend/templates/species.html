@@ -71,12 +71,12 @@
     </div>
 
     {% if observations %}
-    <table class="observations-table">
+    <table class="observations-table" role="table">
         <thead>
             <tr>
-                <th>Location</th>
-                <th>Count</th>
-                <th>Date</th>
+                <th scope="col">Location</th>
+                <th scope="col">Count</th>
+                <th scope="col">Date</th>
             </tr>
         </thead>
         <tbody>
@@ -90,7 +90,7 @@
                             {{ obs.locName }}
                         {% endif %}
                     </span>
-                    <a href="https://ebird.org/checklist/{{ obs.subId }}" target="_blank" class="checklist-link" title="View checklist on eBird">📋</a>
+                    <a href="https://ebird.org/checklist/{{ obs.subId }}" target="_blank" class="checklist-link" title="View checklist on eBird" aria-label="View checklist on eBird">📋</a>
                 </td>
                 <td class="count">{{ obs.howMany if obs.howMany else "X" }}</td>
                 <td class="date">{{ obs.obsDt|format_date }}</td>
@@ -104,5 +104,6 @@
 </section>
 
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
+<script src="/static/utils.js"></script>
 <script src="/static/autocomplete.js"></script>
 {% endblock %}
