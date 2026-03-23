@@ -6,17 +6,17 @@ to in-memory cache on serverless platforms with read-only filesystems.
 
 import json
 import logging
-from pathlib import Path
 
 import httpx
+
+from .config import settings
+from .models import GeocodedLocation
 
 logger = logging.getLogger(__name__)
 
 # Configuration constants
-CACHE_FILE = Path(__file__).parent.parent / "geocode_cache.json"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 USER_AGENT = "eBirdExplorer/1.0 (personal birding tool)"
-NOMINATIM_TIMEOUT = 10.0
 
 # In-memory fallback cache
 _memory_cache: dict = {}
@@ -51,7 +51,7 @@ class GeocodingClient:
         if self._client is None:
             self._client = httpx.AsyncClient(
                 headers={"User-Agent": USER_AGENT},
-                timeout=NOMINATIM_TIMEOUT,
+                timeout=settings.nominatim_timeout,
             )
         return self._client
 
@@ -61,11 +61,11 @@ class GeocodingClient:
             await self._client.aclose()
             self._client = None
 
-    async def geocode(self, location: str) -> dict | None:
+    async def geocode(self, location: str) -> GeocodedLocation | None:
         """
         Convert a location string to lat/lng coordinates.
 
-        Returns dict with 'lat', 'lng', 'display_name' or None if not found.
+        Returns GeocodedLocation model or None if not found.
         Results are cached (file-based locally, in-memory on serverless).
 
         Raises:
@@ -77,7 +77,12 @@ class GeocodingClient:
 
         if cache_key in cache:
             logger.debug(f"Geocode cache hit for '{location}'")
-            return cache[cache_key]
+            cached = cache[cache_key]
+            return GeocodedLocation(
+                lat=cached["lat"],
+                lng=cached["lng"],
+                display_name=cached["display_name"],
+            )
 
         # For US ZIP codes, append USA to avoid matching foreign postal codes
         query = location
@@ -117,14 +122,14 @@ class GeocodingClient:
             return None
 
         result = results[0]
-        geocoded = {
-            "lat": float(result["lat"]),
-            "lng": float(result["lon"]),
-            "display_name": result["display_name"],
-        }
+        geocoded = GeocodedLocation(
+            lat=float(result["lat"]),
+            lng=float(result["lon"]),  # Nominatim uses "lon"
+            display_name=result["display_name"],
+        )
 
-        logger.info(f"Geocoded '{location}' -> {geocoded['display_name']}")
-        cache[cache_key] = geocoded
+        logger.info(f"Geocoded '{location}' -> {geocoded.display_name}")
+        cache[cache_key] = {"lat": geocoded.lat, "lng": geocoded.lng, "display_name": geocoded.display_name}
         _save_cache(cache)
         return geocoded
 
@@ -132,8 +137,8 @@ class GeocodingClient:
 def _load_cache() -> dict:
     """Load from file cache, fall back to memory cache."""
     try:
-        if CACHE_FILE.exists():
-            cache = json.loads(CACHE_FILE.read_text())
+        if settings.cache_file.exists():
+            cache = json.loads(settings.cache_file.read_text())
             logger.debug(f"Loaded geocode cache from file ({len(cache)} entries)")
             return cache
     except (OSError, json.JSONDecodeError) as e:
@@ -146,7 +151,7 @@ def _save_cache(cache: dict) -> None:
     global _memory_cache
     _memory_cache = cache
     try:
-        CACHE_FILE.write_text(json.dumps(cache, indent=2))
+        settings.cache_file.write_text(json.dumps(cache, indent=2))
         logger.debug(f"Saved geocode cache to file ({len(cache)} entries)")
     except OSError as e:
         logger.debug(f"Could not write geocode cache file (using memory): {e}")
@@ -168,12 +173,12 @@ def _looks_like_us_zip(location: str) -> bool:
 _geocoding_client = GeocodingClient()
 
 
-async def geocode(location: str) -> dict | None:
+async def geocode(location: str) -> GeocodedLocation | None:
     """
     Convert a location string to lat/lng coordinates.
 
     This is a convenience function that uses the singleton client.
-    Returns dict with 'lat', 'lng', 'display_name' or None if not found.
+    Returns GeocodedLocation model or None if not found.
     """
     return await _geocoding_client.geocode(location)
 

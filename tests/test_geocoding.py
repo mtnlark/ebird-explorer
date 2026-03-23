@@ -59,7 +59,9 @@ class TestGeocode:
         with patch("backend.geocoding._load_cache", return_value={"new york": cached_data}):
             result = await geocode("New York")
 
-            assert result == cached_data
+            assert result.lat == cached_data["lat"]
+            assert result.lng == cached_data["lng"]
+            assert result.display_name == cached_data["display_name"]
 
     @pytest.mark.asyncio
     async def test_fetches_from_api_on_cache_miss(self):
@@ -89,8 +91,8 @@ class TestGeocode:
 
                     result = await geocode("New York")
 
-                    assert result["lat"] == 40.7128
-                    assert result["lng"] == -74.0060
+                    assert result.lat == 40.7128
+                    assert result.lng == -74.0060
 
     @pytest.mark.asyncio
     async def test_returns_none_when_not_found(self):
@@ -163,9 +165,9 @@ class TestGeocode:
             result2 = await geocode("NEW YORK")
             result3 = await geocode("new york")
 
-            assert result1 == cached_data
-            assert result2 == cached_data
-            assert result3 == cached_data
+            assert result1.lat == cached_data["lat"]
+            assert result2.lat == cached_data["lat"]
+            assert result3.lat == cached_data["lat"]
 
 
 class TestCachePersistence:
@@ -173,24 +175,21 @@ class TestCachePersistence:
 
     def test_load_cache_from_file(self, tmp_path):
         """Test that cache loads from file when it exists."""
+        from backend.geocoding import _load_cache
 
         cache_data = {"test location": {"lat": 1.0, "lng": 2.0, "display_name": "Test"}}
+        cache_file = tmp_path / "cache.json"
+        cache_file.write_text(json.dumps(cache_data))
 
-        with patch("backend.geocoding.CACHE_FILE", tmp_path / "cache.json"):
-            (tmp_path / "cache.json").write_text(json.dumps(cache_data))
-
-            from backend import geocoding
-
-            geocoding.CACHE_FILE = tmp_path / "cache.json"
-
-            result = geocoding._load_cache()
+        with patch("backend.config.settings.cache_file", cache_file):
+            result = _load_cache()
             assert result == cache_data
 
     def test_load_cache_returns_memory_on_file_error(self):
         """Test that memory cache is returned when file read fails."""
         from backend.geocoding import _load_cache
 
-        with patch("backend.geocoding.CACHE_FILE") as mock_path:
+        with patch("backend.config.settings.cache_file") as mock_path:
             mock_path.exists.return_value = True
             mock_path.read_text.side_effect = OSError("Permission denied")
 
@@ -202,7 +201,7 @@ class TestCachePersistence:
         """Test that save_cache doesn't raise on read-only filesystem."""
         from backend.geocoding import _save_cache
 
-        with patch("backend.geocoding.CACHE_FILE") as mock_path:
+        with patch("backend.config.settings.cache_file") as mock_path:
             mock_path.write_text.side_effect = OSError("Read-only filesystem")
 
             # Should not raise
