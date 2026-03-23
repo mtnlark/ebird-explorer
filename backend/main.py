@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-import os
 import re
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta
@@ -13,13 +12,13 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from .config import settings
 from .ebird_client import ebird
 from .geocoding import GeocodingError, close_geocoding_client, geocode
 
 # Configure logging
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL, logging.INFO),
+    level=getattr(logging, settings.log_level.upper(), logging.INFO),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
