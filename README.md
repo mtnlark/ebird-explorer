@@ -33,9 +33,34 @@ I'm a birder who wanted a way to quickly answer common questions like "what's be
 
 ## Tech Stack
 
-- **Backend**: Python, FastAPI, httpx
-- **Frontend**: Server-rendered HTML with vanilla JavaScript
+- **Backend**: Python 3.11+, FastAPI, httpx (async HTTP)
+- **Frontend**: Server-rendered HTML (Jinja2) with vanilla JavaScript
+- **Validation**: Pydantic v2 for API response parsing and configuration
 - **APIs**: eBird API, OpenStreetMap Nominatim (geocoding)
+- **Tooling**: ruff (linting/formatting), pytest (testing)
+
+## Architecture
+
+```
+backend/
+├── main.py           # FastAPI routes, request handling
+├── config.py         # Centralized settings (pydantic-settings)
+├── models.py         # Pydantic models for API responses
+├── ebird_client.py   # Async eBird API client
+├── geocoding.py      # Nominatim geocoding with caching
+├── templates/        # Jinja2 HTML templates
+└── static/           # CSS and JavaScript
+
+tests/                # pytest test suite (90+ tests)
+api/index.py          # Vercel serverless entrypoint
+```
+
+**Key patterns:**
+
+- **Pydantic models** validate and transform external API responses at the boundary, converting camelCase fields to snake_case with type safety
+- **Centralized configuration** via `pydantic-settings` loads from environment variables with validation at startup
+- **Async HTTP clients** (`httpx.AsyncClient`) with connection pooling for efficient API calls
+- **Geocoding cache** persists to JSON file to respect Nominatim rate limits
 
 ## Deployment
 
