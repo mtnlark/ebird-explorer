@@ -11,26 +11,6 @@ I'm a birder who wanted a way to quickly answer common questions like "what's be
 - **Hotspot Explorer**: Browse hotspots near a location and see recent activity
 - **Species Lookup**: Search for where a specific species has been seen recently, with autocomplete
 
-## Setup
-
-1. Get a free eBird API key at https://ebird.org/api/keygen
-
-2. Clone the repo and set up your environment:
-   ```bash
-   git clone https://github.com/mtnlark/ebird-explorer.git
-   cd ebird-explorer
-   cp .env.example .env
-   # Edit .env and add your API key
-   ```
-
-3. Install dependencies and run:
-   ```bash
-   pip install -r requirements.txt
-   uvicorn backend.main:app --reload
-   ```
-
-4. Open http://localhost:8000
-
 ## Tech Stack
 
 - **Backend**: Python 3.11+, FastAPI, httpx (async HTTP)
@@ -62,9 +42,25 @@ api/index.py          # Vercel serverless entrypoint
 - **Async HTTP clients** (`httpx.AsyncClient`) with connection pooling for efficient API calls
 - **Geocoding cache** persists to JSON file to respect Nominatim rate limits
 
-## Deployment
+## Setup
 
-The app is configured for deployment on Vercel. Push to your repo and connect it to Vercel, making sure to set the `EBIRD_API_KEY` environment variable.
+1. Get a free eBird API key at https://ebird.org/api/keygen
+
+2. Clone the repo and set up your environment:
+   ```bash
+   git clone https://github.com/mtnlark/ebird-explorer.git
+   cd ebird-explorer
+   cp .env.example .env
+   # Edit .env and add your API key
+   ```
+
+3. Install dependencies and run:
+   ```bash
+   pip install -r requirements.txt
+   uvicorn backend.main:app --reload
+   ```
+
+4. Open http://localhost:8000
 
 ## Development
 
@@ -89,7 +85,11 @@ ruff check backend/ tests/
 ruff format backend/ tests/
 ```
 
-### Screenshots
+## Deployment
+
+The app is configured for deployment on Vercel. Push to your repo and connect it to Vercel, making sure to set the `EBIRD_API_KEY` environment variable.
+
+## Screenshots
 
 Recent sightings in Charleston, SC:
 ![Recent sightings](assets/recent.png)
