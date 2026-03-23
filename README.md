@@ -44,27 +44,35 @@ api/index.py          # Vercel serverless entrypoint
 
 ## Setup
 
+**Requirements:** Python 3.11+
+
 1. Get a free eBird API key at https://ebird.org/api/keygen
 
 2. Clone the repo and set up your environment:
    ```bash
    git clone https://github.com/mtnlark/ebird-explorer.git
    cd ebird-explorer
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+3. Configure your API key:
+   ```bash
    cp .env.example .env
    # Edit .env and add your API key
    ```
 
-3. Install dependencies and run:
+4. Install dependencies and run:
    ```bash
    pip install -r requirements.txt
    uvicorn backend.main:app --reload
    ```
 
-4. Open http://localhost:8000
+5. Open http://localhost:8000
 
 ## Development
 
-Install dev dependencies:
+For development, install in editable mode with dev dependencies (includes pytest, ruff):
 ```bash
 pip install -e ".[dev]"
 ```
