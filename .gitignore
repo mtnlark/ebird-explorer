@@ -5,3 +5,4 @@ geocode_cache.json
 .venv/
 .DS_Store
 .claude/
+docs/superpowers/
