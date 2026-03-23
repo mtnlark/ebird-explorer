@@ -1,10 +1,9 @@
 """Tests for backend/main.py - FastAPI routes and utilities."""
 
 from datetime import date, timedelta
-from unittest.mock import patch, AsyncMock
-import pytest
+from unittest.mock import patch
 
-from backend.geocoding import GeocodingNetworkError, GeocodingTimeoutError
+from backend.geocoding import GeocodingNetworkError, GeocodingTimeoutError  # noqa: F401
 
 
 class TestFormatObsDate:
@@ -283,11 +282,11 @@ class TestSpeciesCodeValidation:
 
         invalid_codes = [
             "BALEAG",  # Uppercase
-            "bal",     # Too short
+            "bal",  # Too short
             "bald eagle",  # Contains space
             "bal-eag",  # Contains hyphen
             "123456",  # All numbers
-            "",        # Empty
+            "",  # Empty
         ]
         for code in invalid_codes:
             assert not SPECIES_CODE_PATTERN.match(code), f"{code} should be invalid"
@@ -317,9 +316,13 @@ class TestSpeciesRoute:
         assert response.status_code == 200
         assert "Invalid species code" in response.text
 
-    def test_species_search_location_not_found(self, client, mock_geocode_not_found, mock_ebird_client):
+    def test_species_search_location_not_found(
+        self, client, mock_geocode_not_found, mock_ebird_client
+    ):
         """Test species search with unknown location shows error."""
-        response = client.get("/species?species=baleag&location=NonexistentPlace")
+        response = client.get(
+            "/species?species=baleag&location=NonexistentPlace"
+        )
 
         assert response.status_code == 200
         assert "Could not find location" in response.text

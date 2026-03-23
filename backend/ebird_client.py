@@ -1,9 +1,10 @@
 """eBird API client with async support."""
 
-import httpx
 import logging
 import os
-from typing import TypedDict, NotRequired
+from typing import NotRequired, TypedDict
+
+import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -78,26 +79,31 @@ class Species(TypedDict):
 
 class EBirdAPIError(Exception):
     """Base exception for eBird API errors."""
+
     pass
 
 
 class EBirdAuthError(EBirdAPIError):
     """Invalid or missing API key."""
+
     pass
 
 
 class EBirdRateLimitError(EBirdAPIError):
     """API rate limit exceeded."""
+
     pass
 
 
 class EBirdTimeoutError(EBirdAPIError):
     """Request timed out."""
+
     pass
 
 
 class EBirdNetworkError(EBirdAPIError):
     """Network connectivity error."""
+
     pass
 
 
@@ -160,15 +166,19 @@ class EBirdClient:
             self._handle_response(response)
             logger.debug(f"eBird API response: {response.status_code}")
             return response
-        except httpx.TimeoutException:
+        except httpx.TimeoutException as e:
             logger.warning(f"eBird API timeout: {endpoint}")
-            raise EBirdTimeoutError("eBird API request timed out - the server may be slow")
-        except httpx.ConnectError:
+            raise EBirdTimeoutError(
+                "eBird API request timed out - the server may be slow"
+            ) from e
+        except httpx.ConnectError as e:
             logger.error(f"eBird API connection error: {endpoint}")
-            raise EBirdNetworkError("Could not connect to eBird API - check your internet connection")
+            raise EBirdNetworkError(
+                "Could not connect to eBird API - check your internet connection"
+            ) from e
         except httpx.RequestError as e:
             logger.error(f"eBird API request error: {endpoint} - {e}")
-            raise EBirdNetworkError(f"Network error: {e}")
+            raise EBirdNetworkError(f"Network error: {e}") from e
 
     async def get_recent_observations(
         self,
@@ -267,12 +277,16 @@ class EBirdClient:
                 return None
             self._handle_response(response)
             return response.json()
-        except httpx.TimeoutException:
-            raise EBirdTimeoutError("eBird API request timed out - the server may be slow")
-        except httpx.ConnectError:
-            raise EBirdNetworkError("Could not connect to eBird API - check your internet connection")
+        except httpx.TimeoutException as e:
+            raise EBirdTimeoutError(
+                "eBird API request timed out - the server may be slow"
+            ) from e
+        except httpx.ConnectError as e:
+            raise EBirdNetworkError(
+                "Could not connect to eBird API - check your internet connection"
+            ) from e
         except httpx.RequestError as e:
-            raise EBirdNetworkError(f"Network error: {e}")
+            raise EBirdNetworkError(f"Network error: {e}") from e
 
     async def get_taxonomy(self) -> list[Species]:
         """Get eBird taxonomy (species list) for autocomplete."""

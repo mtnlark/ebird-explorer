@@ -1,8 +1,9 @@
 """Shared test fixtures for eBird Explorer."""
 
 import os
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 
 # Set test environment variables before importing app
@@ -13,6 +14,7 @@ os.environ["EBIRD_API_KEY"] = "test_api_key_12345"
 def client():
     """FastAPI test client."""
     from backend.main import app
+
     with TestClient(app) as c:
         yield c
 

@@ -6,8 +6,9 @@ to in-memory cache on serverless platforms with read-only filesystems.
 
 import json
 import logging
-import httpx
 from pathlib import Path
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -23,16 +24,19 @@ _memory_cache: dict = {}
 
 class GeocodingError(Exception):
     """Base exception for geocoding errors."""
+
     pass
 
 
 class GeocodingNetworkError(GeocodingError):
     """Network connectivity error during geocoding."""
+
     pass
 
 
 class GeocodingTimeoutError(GeocodingError):
     """Request timed out during geocoding."""
+
     pass
 
 
@@ -94,19 +98,19 @@ class GeocodingClient:
             )
             response.raise_for_status()
             results = response.json()
-        except httpx.TimeoutException:
+        except httpx.TimeoutException as e:
             logger.warning(f"Geocoding timeout for '{location}'")
             raise GeocodingTimeoutError(
                 "Geocoding request timed out - the server may be slow"
-            )
-        except httpx.ConnectError:
+            ) from e
+        except httpx.ConnectError as e:
             logger.error(f"Geocoding connection error for '{location}'")
             raise GeocodingNetworkError(
                 "Could not connect to geocoding service - check your internet connection"
-            )
+            ) from e
         except httpx.RequestError as e:
             logger.error(f"Geocoding request error for '{location}': {e}")
-            raise GeocodingNetworkError(f"Geocoding network error: {e}")
+            raise GeocodingNetworkError(f"Geocoding network error: {e}") from e
 
         if not results:
             logger.info(f"Geocoding found no results for '{location}'")
@@ -152,11 +156,12 @@ def _looks_like_us_zip(location: str) -> bool:
     """Check if input looks like a US ZIP code (5 digits or 5+4 format)."""
     loc = location.strip()
     # 5 digits or 5 digits + hyphen + 4 digits
-    if loc.isdigit() and len(loc) == 5:
-        return True
-    if len(loc) == 10 and loc[:5].isdigit() and loc[5] == '-' and loc[6:].isdigit():
-        return True
-    return False
+    return (loc.isdigit() and len(loc) == 5) or (
+        len(loc) == 10
+        and loc[:5].isdigit()
+        and loc[5] == "-"
+        and loc[6:].isdigit()
+    )
 
 
 # Singleton instance

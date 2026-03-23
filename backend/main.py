@@ -5,15 +5,16 @@ import logging
 import os
 import re
 from contextlib import asynccontextmanager
-from datetime import datetime, date, timedelta
-from fastapi import FastAPI, Request, Form, Query
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from .geocoding import geocode, close_geocoding_client, GeocodingError
+from fastapi import FastAPI, Query, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
 from .ebird_client import ebird
+from .geocoding import GeocodingError, close_geocoding_client, geocode
 
 # Configure logging
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -102,7 +103,9 @@ async def _search_observations(
 ) -> HTMLResponse:
     """Common handler for search and notable endpoints."""
     search_type = "notable" if notable else "recent"
-    logger.info(f"Search request: {search_type} observations near '{location}' ({radius}mi, {days}d)")
+    logger.info(
+        f"Search request: {search_type} observations near '{location}' ({radius}mi, {days}d)"
+    )
 
     try:
         geo = await geocode(location)
@@ -348,11 +351,13 @@ async def api_species(q: str = Query(default="", min_length=0)):
         com_name = species.get("comName", "").lower()
         sci_name = species.get("sciName", "").lower()
         if q_lower in com_name or q_lower in sci_name:
-            matches.append({
-                "code": species["speciesCode"],
-                "name": species["comName"],
-                "sciName": species["sciName"],
-            })
+            matches.append(
+                {
+                    "code": species["speciesCode"],
+                    "name": species["comName"],
+                    "sciName": species["sciName"],
+                }
+            )
             if len(matches) >= 10:
                 break
     return matches

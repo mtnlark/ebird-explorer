@@ -1,16 +1,17 @@
 """Tests for backend/ebird_client.py - eBird API client."""
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import httpx
+import pytest
 
 from backend.ebird_client import (
-    EBirdClient,
     EBirdAPIError,
     EBirdAuthError,
+    EBirdClient,
+    EBirdNetworkError,
     EBirdRateLimitError,
     EBirdTimeoutError,
-    EBirdNetworkError,
 )
 
 
@@ -19,9 +20,10 @@ class TestEBirdClientInitialization:
 
     def test_client_requires_api_key(self):
         """Test that client raises error without API key."""
-        with patch("backend.ebird_client.EBIRD_API_KEY", None):
-            with pytest.raises(ValueError, match="EBIRD_API_KEY"):
-                EBirdClient()
+        with patch("backend.ebird_client.EBIRD_API_KEY", None), pytest.raises(
+            ValueError, match="EBIRD_API_KEY"
+        ):
+            EBirdClient()
 
     def test_client_initializes_with_api_key(self):
         """Test that client initializes when API key is present."""
