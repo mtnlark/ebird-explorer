@@ -2,79 +2,15 @@
 
 import logging
 import os
-from typing import NotRequired, TypedDict
 
 import httpx
-from dotenv import load_dotenv
 
-load_dotenv()
+from .config import settings
+from .models import Hotspot, HotspotInfo, Observation, Species
 
 logger = logging.getLogger(__name__)
 
-EBIRD_API_KEY = os.getenv("EBIRD_API_KEY")
 EBIRD_BASE_URL = "https://api.ebird.org/v2"
-
-
-# Type definitions for eBird API responses
-class Observation(TypedDict):
-    """An eBird observation record."""
-
-    speciesCode: str
-    comName: str
-    sciName: str
-    locId: str
-    locName: str
-    obsDt: str
-    howMany: NotRequired[int]
-    lat: float
-    lng: float
-    obsValid: bool
-    obsReviewed: bool
-    locationPrivate: bool
-    subId: str
-
-
-class Hotspot(TypedDict):
-    """An eBird hotspot location."""
-
-    locId: str
-    locName: str
-    countryCode: str
-    subnational1Code: str
-    lat: float
-    lng: float
-    latestObsDt: NotRequired[str]
-    numSpeciesAllTime: NotRequired[int]
-
-
-class HotspotInfo(TypedDict):
-    """Detailed hotspot information."""
-
-    locId: str
-    name: str
-    latitude: float
-    longitude: float
-    countryCode: str
-    countryName: str
-    subnational1Code: str
-    subnational1Name: str
-    subnational2Code: NotRequired[str]
-    subnational2Name: NotRequired[str]
-    isHotspot: bool
-    hierarchicalName: str
-    numSpeciesAllTime: NotRequired[int]
-
-
-class Species(TypedDict):
-    """An eBird species from the taxonomy."""
-
-    speciesCode: str
-    comName: str
-    sciName: str
-    category: NotRequired[str]
-    order: NotRequired[str]
-    familyCode: NotRequired[str]
-    familyComName: NotRequired[str]
 
 
 class EBirdAPIError(Exception):
@@ -109,9 +45,7 @@ class EBirdNetworkError(EBirdAPIError):
 
 class EBirdClient:
     def __init__(self):
-        self.api_key = EBIRD_API_KEY
-        if not self.api_key:
-            raise ValueError("EBIRD_API_KEY not found in environment")
+        self.api_key = settings.ebird_api_key
         # Shared HTTP client for connection pooling
         self._client: httpx.AsyncClient | None = None
 
@@ -124,7 +58,7 @@ class EBirdClient:
             self._client = httpx.AsyncClient(
                 base_url=EBIRD_BASE_URL,
                 headers=self._headers(),
-                timeout=15.0,
+                timeout=settings.ebird_timeout,
             )
         return self._client
 
@@ -210,7 +144,7 @@ class EBirdClient:
                 "sort": "date",
             },
         )
-        return response.json()
+        return [Observation.model_validate(obs) for obs in response.json()]
 
     async def get_notable_observations(
         self,
@@ -230,7 +164,7 @@ class EBirdClient:
                 "back": min(back, 30),
             },
         )
-        return response.json()
+        return [Observation.model_validate(obs) for obs in response.json()]
 
     async def get_nearby_hotspots(
         self,
@@ -249,7 +183,7 @@ class EBirdClient:
                 "fmt": "json",
             },
         )
-        return response.json()
+        return [Hotspot.model_validate(h) for h in response.json()]
 
     async def get_hotspot_observations(
         self,
@@ -262,7 +196,7 @@ class EBirdClient:
             f"/data/obs/{loc_id}/recent",
             params={"back": min(back, 30)},
         )
-        return response.json()
+        return [Observation.model_validate(obs) for obs in response.json()]
 
     async def get_hotspot_info(self, loc_id: str) -> HotspotInfo | None:
         """Get info about a specific hotspot. Returns None if not found."""
@@ -276,7 +210,7 @@ class EBirdClient:
             if response.status_code == 404:
                 return None
             self._handle_response(response)
-            return response.json()
+            return HotspotInfo.model_validate(response.json())
         except httpx.TimeoutException as e:
             raise EBirdTimeoutError(
                 "eBird API request timed out - the server may be slow"
@@ -294,9 +228,9 @@ class EBirdClient:
             "GET",
             "/ref/taxonomy/ebird",
             params={"fmt": "json", "cat": "species"},
-            timeout=30.0,
+            timeout=settings.ebird_taxonomy_timeout,
         )
-        return response.json()
+        return [Species.model_validate(s) for s in response.json()]
 
     async def get_nearest_species_observations(
         self,
@@ -317,7 +251,7 @@ class EBirdClient:
                 "back": min(back, 30),
             },
         )
-        return response.json()
+        return [Observation.model_validate(obs) for obs in response.json()]
 
 
 # Singleton instance

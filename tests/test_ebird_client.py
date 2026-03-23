@@ -18,19 +18,18 @@ from backend.ebird_client import (
 class TestEBirdClientInitialization:
     """Tests for EBirdClient initialization."""
 
-    def test_client_requires_api_key(self):
-        """Test that client raises error without API key."""
-        with patch("backend.ebird_client.EBIRD_API_KEY", None), pytest.raises(
-            ValueError, match="EBIRD_API_KEY"
-        ):
-            EBirdClient()
-
     def test_client_initializes_with_api_key(self):
         """Test that client initializes when API key is present."""
-        with patch("backend.ebird_client.EBIRD_API_KEY", "test_key"):
+        with patch("backend.ebird_client.settings.ebird_api_key", "test_key"):
             client = EBirdClient()
             assert client.api_key == "test_key"
             assert client._client is None  # Lazy initialization
+
+    def test_client_uses_settings_api_key(self):
+        """Test that client gets API key from settings."""
+        with patch("backend.ebird_client.settings.ebird_api_key", "settings_key"):
+            client = EBirdClient()
+            assert client.api_key == "settings_key"
 
 
 class TestEBirdClientConnectionPooling:
@@ -39,7 +38,7 @@ class TestEBirdClientConnectionPooling:
     @pytest.mark.asyncio
     async def test_client_creates_http_client_lazily(self):
         """Test that AsyncClient is created on first request."""
-        with patch("backend.ebird_client.EBIRD_API_KEY", "test_key"):
+        with patch("backend.ebird_client.settings.ebird_api_key", "test_key"):
             client = EBirdClient()
             assert client._client is None
 
@@ -62,7 +61,7 @@ class TestEBirdClientConnectionPooling:
     @pytest.mark.asyncio
     async def test_client_reuses_http_client(self):
         """Test that the same AsyncClient is reused across requests."""
-        with patch("backend.ebird_client.EBIRD_API_KEY", "test_key"):
+        with patch("backend.ebird_client.settings.ebird_api_key", "test_key"):
             client = EBirdClient()
 
             mock_response = MagicMock()
@@ -86,7 +85,7 @@ class TestEBirdClientConnectionPooling:
     @pytest.mark.asyncio
     async def test_aclose_closes_client(self):
         """Test that aclose properly closes the HTTP client."""
-        with patch("backend.ebird_client.EBIRD_API_KEY", "test_key"):
+        with patch("backend.ebird_client.settings.ebird_api_key", "test_key"):
             client = EBirdClient()
 
             mock_response = MagicMock()
@@ -112,7 +111,7 @@ class TestEBirdClientConnectionPooling:
     @pytest.mark.asyncio
     async def test_aclose_handles_uninitialized_client(self):
         """Test that aclose works even if client was never initialized."""
-        with patch("backend.ebird_client.EBIRD_API_KEY", "test_key"):
+        with patch("backend.ebird_client.settings.ebird_api_key", "test_key"):
             client = EBirdClient()
             # Should not raise
             await client.aclose()
@@ -125,7 +124,7 @@ class TestEBirdClientErrorHandling:
     @pytest.fixture
     def client_with_mock(self):
         """Create a client with mocked HTTP client."""
-        with patch("backend.ebird_client.EBIRD_API_KEY", "test_key"):
+        with patch("backend.ebird_client.settings.ebird_api_key", "test_key"):
             client = EBirdClient()
             mock_http_client = AsyncMock()
             client._client = mock_http_client
@@ -220,7 +219,7 @@ class TestEBirdClientMethods:
     @pytest.fixture
     def client_with_mock(self):
         """Create a client with mocked HTTP client."""
-        with patch("backend.ebird_client.EBIRD_API_KEY", "test_key"):
+        with patch("backend.ebird_client.settings.ebird_api_key", "test_key"):
             client = EBirdClient()
             mock_http_client = AsyncMock()
             client._client = mock_http_client
@@ -281,10 +280,11 @@ class TestEBirdClientMethods:
         mock_response.json.return_value = []
         mock_http.request = AsyncMock(return_value=mock_response)
 
-        await client.get_taxonomy()
+        with patch("backend.ebird_client.settings.ebird_taxonomy_timeout", 30.0):
+            await client.get_taxonomy()
 
-        call_args = mock_http.request.call_args
-        assert call_args[1]["timeout"] == 30.0
+            call_args = mock_http.request.call_args
+            assert call_args[1]["timeout"] == 30.0
 
 
 class TestGetHotspotInfo:
@@ -293,7 +293,7 @@ class TestGetHotspotInfo:
     @pytest.fixture
     def client_with_mock(self):
         """Create a client with mocked HTTP client."""
-        with patch("backend.ebird_client.EBIRD_API_KEY", "test_key"):
+        with patch("backend.ebird_client.settings.ebird_api_key", "test_key"):
             client = EBirdClient()
             mock_http_client = AsyncMock()
             client._client = mock_http_client
@@ -315,7 +315,18 @@ class TestGetHotspotInfo:
     async def test_returns_info_on_success(self, client_with_mock):
         """Test that successful response returns hotspot info."""
         client, mock_http = client_with_mock
-        hotspot_data = {"locId": "L123456", "name": "Central Park"}
+        hotspot_data = {
+            "locId": "L123456",
+            "name": "Central Park",
+            "latitude": 40.7829,
+            "longitude": -73.9654,
+            "countryCode": "US",
+            "countryName": "United States",
+            "subnational1Code": "US-NY",
+            "subnational1Name": "New York",
+            "isHotspot": True,
+            "hierarchicalName": "Central Park, New York, US",
+        }
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = hotspot_data
@@ -324,7 +335,9 @@ class TestGetHotspotInfo:
 
         result = await client.get_hotspot_info("L123456")
 
-        assert result == hotspot_data
+        # Result is now a HotspotInfo Pydantic model
+        assert result.location_id == "L123456"
+        assert result.name == "Central Park"
 
     @pytest.mark.asyncio
     async def test_raises_on_other_errors(self, client_with_mock):
