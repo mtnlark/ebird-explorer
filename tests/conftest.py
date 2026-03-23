@@ -22,12 +22,14 @@ def client():
 @pytest.fixture
 def mock_geocode():
     """Mock geocode function returning NYC coordinates."""
+    from backend.models import GeocodedLocation
+
     with patch("backend.main.geocode") as mock:
-        mock.return_value = {
-            "lat": 40.7128,
-            "lng": -74.0060,
-            "display_name": "New York, NY, USA",
-        }
+        mock.return_value = GeocodedLocation(
+            lat=40.7128,
+            lng=-74.0060,
+            display_name="New York, NY, USA",
+        )
         yield mock
 
 
@@ -42,92 +44,112 @@ def mock_geocode_not_found():
 @pytest.fixture
 def sample_observations():
     """Sample eBird observation data."""
+    from backend.models import Observation
+
     return [
-        {
-            "speciesCode": "baleag",
-            "comName": "Bald Eagle",
-            "sciName": "Haliaeetus leucocephalus",
-            "locId": "L123456",
-            "locName": "Central Park",
-            "obsDt": "2024-12-30 14:30",
-            "howMany": 2,
-            "subId": "S12345678",
-            "locationPrivate": False,
-        },
-        {
-            "speciesCode": "rewbla",
-            "comName": "Red-winged Blackbird",
-            "sciName": "Agelaius phoeniceus",
-            "locId": "L123456",
-            "locName": "Central Park",
-            "obsDt": "2024-12-29 09:15",
-            "howMany": 15,
-            "subId": "S12345679",
-            "locationPrivate": False,
-        },
+        Observation(
+            speciesCode="baleag",
+            comName="Bald Eagle",
+            sciName="Haliaeetus leucocephalus",
+            locId="L123456",
+            locName="Central Park",
+            obsDt="2024-12-30 14:30",
+            howMany=2,
+            lat=40.7829,
+            lng=-73.9654,
+            obsValid=True,
+            obsReviewed=False,
+            locationPrivate=False,
+            subId="S12345678",
+        ),
+        Observation(
+            speciesCode="rewbla",
+            comName="Red-winged Blackbird",
+            sciName="Agelaius phoeniceus",
+            locId="L123456",
+            locName="Central Park",
+            obsDt="2024-12-29 09:15",
+            howMany=15,
+            lat=40.7829,
+            lng=-73.9654,
+            obsValid=True,
+            obsReviewed=False,
+            locationPrivate=False,
+            subId="S12345679",
+        ),
     ]
 
 
 @pytest.fixture
 def sample_hotspots():
     """Sample eBird hotspot data."""
+    from backend.models import Hotspot
+
     return [
-        {
-            "locId": "L123456",
-            "locName": "Central Park",
-            "countryCode": "US",
-            "subnational1Code": "US-NY",
-            "lat": 40.7829,
-            "lng": -73.9654,
-            "numSpeciesAllTime": 250,
-            "latestObsDt": "2024-12-30",
-        },
-        {
-            "locId": "L789012",
-            "locName": "Prospect Park",
-            "countryCode": "US",
-            "subnational1Code": "US-NY",
-            "lat": 40.6602,
-            "lng": -73.9690,
-            "numSpeciesAllTime": 200,
-            "latestObsDt": "2024-12-29",
-        },
+        Hotspot(
+            locId="L123456",
+            locName="Central Park",
+            countryCode="US",
+            subnational1Code="US-NY",
+            lat=40.7829,
+            lng=-73.9654,
+            numSpeciesAllTime=250,
+            latestObsDt="2024-12-30",
+        ),
+        Hotspot(
+            locId="L789012",
+            locName="Prospect Park",
+            countryCode="US",
+            subnational1Code="US-NY",
+            lat=40.6602,
+            lng=-73.9690,
+            numSpeciesAllTime=200,
+            latestObsDt="2024-12-29",
+        ),
     ]
 
 
 @pytest.fixture
 def sample_hotspot_info():
     """Sample hotspot info response."""
-    return {
-        "locId": "L123456",
-        "name": "Central Park",
-        "latitude": 40.7829,
-        "longitude": -73.9654,
-        "countryCode": "US",
-        "subnational1Code": "US-NY",
-        "numSpeciesAllTime": 250,
-    }
+    from backend.models import HotspotInfo
+
+    return HotspotInfo(
+        locId="L123456",
+        name="Central Park",
+        latitude=40.7829,
+        longitude=-73.9654,
+        countryCode="US",
+        countryName="United States",
+        subnational1Code="US-NY",
+        subnational1Name="New York",
+        isHotspot=True,
+        hierarchicalName="Central Park, New York, US",
+        numSpeciesAllTime=250,
+    )
 
 
 @pytest.fixture
 def sample_taxonomy():
     """Sample taxonomy data for species autocomplete."""
+    from backend.models import Species
+
     return [
-        {
-            "speciesCode": "baleag",
-            "comName": "Bald Eagle",
-            "sciName": "Haliaeetus leucocephalus",
-        },
-        {
-            "speciesCode": "rewbla",
-            "comName": "Red-winged Blackbird",
-            "sciName": "Agelaius phoeniceus",
-        },
-        {
-            "speciesCode": "amecro",
-            "comName": "American Crow",
-            "sciName": "Corvus brachyrhynchos",
-        },
+        Species(
+            speciesCode="baleag",
+            comName="Bald Eagle",
+            sciName="Haliaeetus leucocephalus",
+        ),
+        Species(
+            speciesCode="rewbla",
+            comName="Red-winged Blackbird",
+            sciName="Agelaius phoeniceus",
+        ),
+        Species(
+            speciesCode="amecro",
+            comName="American Crow",
+            sciName="Corvus brachyrhynchos",
+        ),
     ]
 
 

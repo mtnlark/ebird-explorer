@@ -91,7 +91,7 @@ def miles_to_km(miles: float) -> int:
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Home page with location search form."""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 
 async def _search_observations(
@@ -112,9 +112,9 @@ async def _search_observations(
     except GeocodingError as e:
         logger.error(f"Geocoding error for '{location}': {e}")
         return templates.TemplateResponse(
+            request,
             "results.html",
             {
-                "request": request,
                 "error": str(e),
                 "location": location,
                 "notable": notable,
@@ -124,9 +124,9 @@ async def _search_observations(
     if not geo:
         logger.warning(f"Geocoding failed for location: {location}")
         return templates.TemplateResponse(
+            request,
             "results.html",
             {
-                "request": request,
                 "error": f"Could not find location: {location}",
                 "location": location,
                 "notable": notable,
@@ -136,8 +136,8 @@ async def _search_observations(
     try:
         fetch_func = ebird.get_notable_observations if notable else ebird.get_recent_observations
         observations = await fetch_func(
-            lat=geo["lat"],
-            lng=geo["lng"],
+            lat=geo.lat,
+            lng=geo.lng,
             dist_km=miles_to_km(radius),
             back=days,
         )
@@ -146,9 +146,9 @@ async def _search_observations(
     except Exception as e:
         logger.error(f"eBird API error for '{location}': {e}")
         return templates.TemplateResponse(
+            request,
             "results.html",
             {
-                "request": request,
                 "error": f"eBird API error: {str(e)}",
                 "location": location,
                 "notable": notable,
@@ -156,12 +156,12 @@ async def _search_observations(
         )
 
     return templates.TemplateResponse(
+        request,
         "results.html",
         {
-            "request": request,
             "location": location,
-            "display_name": geo["display_name"],
-            "observations": observations,
+            "display_name": geo.display_name,
+            "observations": [obs.model_dump(by_alias=True) for obs in observations],
             "radius": radius,
             "days": days,
             "count": len(observations),
@@ -203,9 +203,9 @@ async def hotspots(
         geo = await geocode(location)
     except GeocodingError as e:
         return templates.TemplateResponse(
+            request,
             "hotspots.html",
             {
-                "request": request,
                 "error": str(e),
                 "location": location,
             },
@@ -213,9 +213,9 @@ async def hotspots(
 
     if not geo:
         return templates.TemplateResponse(
+            request,
             "hotspots.html",
             {
-                "request": request,
                 "error": f"Could not find location: {location}",
                 "location": location,
             },
@@ -223,27 +223,27 @@ async def hotspots(
 
     try:
         hotspot_list = await ebird.get_nearby_hotspots(
-            lat=geo["lat"],
-            lng=geo["lng"],
+            lat=geo.lat,
+            lng=geo.lng,
             dist_km=miles_to_km(radius),
         )
     except Exception as e:
         return templates.TemplateResponse(
+            request,
             "hotspots.html",
             {
-                "request": request,
                 "error": f"eBird API error: {str(e)}",
                 "location": location,
             },
         )
 
     return templates.TemplateResponse(
+        request,
         "hotspots.html",
         {
-            "request": request,
             "location": location,
-            "display_name": geo["display_name"],
-            "hotspots": hotspot_list,
+            "display_name": geo.display_name,
+            "hotspots": [h.model_dump(by_alias=True) for h in hotspot_list],
             "radius": radius,
             "count": len(hotspot_list),
         },
@@ -267,9 +267,9 @@ async def hotspot_detail(
     # Validate loc_id format to prevent potential API injection
     if not LOC_ID_PATTERN.match(loc_id):
         return templates.TemplateResponse(
+            request,
             "hotspot.html",
             {
-                "request": request,
                 "error": "Invalid hotspot ID format",
             },
         )
@@ -283,27 +283,27 @@ async def hotspot_detail(
 
         if not info:
             return templates.TemplateResponse(
+                request,
                 "hotspot.html",
                 {
-                    "request": request,
                     "error": f"Hotspot not found: {loc_id}",
                 },
             )
     except Exception as e:
         return templates.TemplateResponse(
+            request,
             "hotspot.html",
             {
-                "request": request,
                 "error": f"eBird API error: {str(e)}",
             },
         )
 
     return templates.TemplateResponse(
+        request,
         "hotspot.html",
         {
-            "request": request,
-            "hotspot": info,
-            "observations": observations,
+            "hotspot": info.model_dump(by_alias=True) if info else None,
+            "observations": [obs.model_dump(by_alias=True) for obs in observations],
             "days": days,
             "count": len(observations),
         },
@@ -314,7 +314,7 @@ async def hotspot_detail(
 _taxonomy_cache: list[dict] | None = None
 
 
-async def get_taxonomy_cached() -> list[dict]:
+async def get_taxonomy_cached():
     """Get taxonomy from cache, fetching from eBird API if needed."""
     global _taxonomy_cache
     if _taxonomy_cache is None:
@@ -330,9 +330,9 @@ async def api_taxonomy():
     # Return simplified list for client-side use
     return [
         {
-            "code": species["speciesCode"],
-            "name": species["comName"],
-            "sciName": species["sciName"],
+            "code": species.species_code,
+            "name": species.common_name,
+            "sciName": species.scientific_name,
         }
         for species in taxonomy
     ]
@@ -348,14 +348,14 @@ async def api_species(q: str = Query(default="", min_length=0)):
     q_lower = q.lower()
     matches = []
     for species in taxonomy:
-        com_name = species.get("comName", "").lower()
-        sci_name = species.get("sciName", "").lower()
+        com_name = species.common_name.lower() if species.common_name else ""
+        sci_name = species.scientific_name.lower() if species.scientific_name else ""
         if q_lower in com_name or q_lower in sci_name:
             matches.append(
                 {
-                    "code": species["speciesCode"],
-                    "name": species["comName"],
-                    "sciName": species["sciName"],
+                    "code": species.species_code,
+                    "name": species.common_name,
+                    "sciName": species.scientific_name,
                 }
             )
             if len(matches) >= 10:
@@ -375,9 +375,9 @@ async def species_search(
     # If no species selected yet, show the search form
     if not species or not location:
         return templates.TemplateResponse(
+            request,
             "species.html",
             {
-                "request": request,
                 "species": species,
                 "location": location,
             },
@@ -388,9 +388,9 @@ async def species_search(
         geo = await geocode(location)
     except GeocodingError as e:
         return templates.TemplateResponse(
+            request,
             "species.html",
             {
-                "request": request,
                 "error": str(e),
                 "species": species,
                 "location": location,
@@ -399,9 +399,9 @@ async def species_search(
 
     if not geo:
         return templates.TemplateResponse(
+            request,
             "species.html",
             {
-                "request": request,
                 "error": f"Could not find location: {location}",
                 "species": species,
                 "location": location,
@@ -411,9 +411,9 @@ async def species_search(
     # Validate species code format to prevent API injection
     if not SPECIES_CODE_PATTERN.match(species):
         return templates.TemplateResponse(
+            request,
             "species.html",
             {
-                "request": request,
                 "error": "Invalid species code format",
                 "location": location,
             },
@@ -424,15 +424,16 @@ async def species_search(
 
     species_info = None
     for s in taxonomy:
-        if s["speciesCode"] == species:
+        # taxonomy now returns Species models, access via attribute
+        if s.species_code == species:
             species_info = s
             break
 
     if not species_info:
         return templates.TemplateResponse(
+            request,
             "species.html",
             {
-                "request": request,
                 "error": f"Species not found: {species}",
                 "location": location,
             },
@@ -442,16 +443,16 @@ async def species_search(
     try:
         observations = await ebird.get_nearest_species_observations(
             species_code=species,
-            lat=geo["lat"],
-            lng=geo["lng"],
+            lat=geo.lat,
+            lng=geo.lng,
             dist_km=miles_to_km(radius),
             back=days,
         )
     except Exception as e:
         return templates.TemplateResponse(
+            request,
             "species.html",
             {
-                "request": request,
                 "error": f"eBird API error: {str(e)}",
                 "species": species,
                 "location": location,
@@ -459,15 +460,15 @@ async def species_search(
         )
 
     return templates.TemplateResponse(
+        request,
         "species.html",
         {
-            "request": request,
             "species_code": species,
-            "species_name": species_info["comName"],
-            "species_sci": species_info["sciName"],
+            "species_name": species_info.common_name,
+            "species_sci": species_info.scientific_name,
             "location": location,
-            "display_name": geo["display_name"],
-            "observations": observations,
+            "display_name": geo.display_name,
+            "observations": [obs.model_dump(by_alias=True) for obs in observations],
             "radius": radius,
             "days": days,
             "count": len(observations),
