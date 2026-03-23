@@ -129,7 +129,11 @@ class GeocodingClient:
         )
 
         logger.info(f"Geocoded '{location}' -> {geocoded.display_name}")
-        cache[cache_key] = {"lat": geocoded.lat, "lng": geocoded.lng, "display_name": geocoded.display_name}
+        cache[cache_key] = {
+            "lat": geocoded.lat,
+            "lng": geocoded.lng,
+            "display_name": geocoded.display_name,
+        }
         _save_cache(cache)
         return geocoded
 
@@ -162,10 +166,7 @@ def _looks_like_us_zip(location: str) -> bool:
     loc = location.strip()
     # 5 digits or 5 digits + hyphen + 4 digits
     return (loc.isdigit() and len(loc) == 5) or (
-        len(loc) == 10
-        and loc[:5].isdigit()
-        and loc[5] == "-"
-        and loc[6:].isdigit()
+        len(loc) == 10 and loc[:5].isdigit() and loc[5] == "-" and loc[6:].isdigit()
     )
 
 

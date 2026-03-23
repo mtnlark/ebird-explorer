@@ -320,9 +320,7 @@ class TestSpeciesRoute:
         self, client, mock_geocode_not_found, mock_ebird_client
     ):
         """Test species search with unknown location shows error."""
-        response = client.get(
-            "/species?species=baleag&location=NonexistentPlace"
-        )
+        response = client.get("/species?species=baleag&location=NonexistentPlace")
 
         assert response.status_code == 200
         assert "Could not find location" in response.text

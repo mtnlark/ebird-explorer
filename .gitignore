@@ -6,3 +6,15 @@ geocode_cache.json
 .DS_Store
 .claude/
 docs/superpowers/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Ruff
+.ruff_cache/
+
+# Build artifacts
+*.egg-info/
+dist/
+build/

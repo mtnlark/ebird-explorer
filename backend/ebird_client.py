@@ -1,7 +1,6 @@
 """eBird API client with async support."""
 
 import logging
-import os
 
 import httpx
 
@@ -102,9 +101,7 @@ class EBirdClient:
             return response
         except httpx.TimeoutException as e:
             logger.warning(f"eBird API timeout: {endpoint}")
-            raise EBirdTimeoutError(
-                "eBird API request timed out - the server may be slow"
-            ) from e
+            raise EBirdTimeoutError("eBird API request timed out - the server may be slow") from e
         except httpx.ConnectError as e:
             logger.error(f"eBird API connection error: {endpoint}")
             raise EBirdNetworkError(
@@ -212,9 +209,7 @@ class EBirdClient:
             self._handle_response(response)
             return HotspotInfo.model_validate(response.json())
         except httpx.TimeoutException as e:
-            raise EBirdTimeoutError(
-                "eBird API request timed out - the server may be slow"
-            ) from e
+            raise EBirdTimeoutError("eBird API request timed out - the server may be slow") from e
         except httpx.ConnectError as e:
             raise EBirdNetworkError(
                 "Could not connect to eBird API - check your internet connection"

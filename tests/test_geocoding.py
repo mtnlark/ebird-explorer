@@ -76,23 +76,25 @@ class TestGeocode:
             }
         ]
 
-        with patch("backend.geocoding._load_cache", return_value={}), patch(
-            "backend.geocoding._save_cache"
-        ), patch("httpx.AsyncClient") as MockClient:
-                    mock_response = MagicMock()
-                    mock_response.json.return_value = api_response
-                    mock_response.raise_for_status = MagicMock()
+        with (
+            patch("backend.geocoding._load_cache", return_value={}),
+            patch("backend.geocoding._save_cache"),
+            patch("httpx.AsyncClient") as MockClient,
+        ):
+            mock_response = MagicMock()
+            mock_response.json.return_value = api_response
+            mock_response.raise_for_status = MagicMock()
 
-                    mock_client = AsyncMock()
-                    mock_client.get = AsyncMock(return_value=mock_response)
-                    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-                    mock_client.__aexit__ = AsyncMock()
-                    MockClient.return_value = mock_client
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock()
+            MockClient.return_value = mock_client
 
-                    result = await geocode("New York")
+            result = await geocode("New York")
 
-                    assert result.lat == 40.7128
-                    assert result.lng == -74.0060
+            assert result.lat == 40.7128
+            assert result.lng == -74.0060
 
     @pytest.mark.asyncio
     async def test_returns_none_when_not_found(self):
@@ -101,9 +103,10 @@ class TestGeocode:
 
         client = GeocodingClient()
 
-        with patch("backend.geocoding._load_cache", return_value={}), patch.object(
-            client, "_get_client"
-        ) as mock_get_client:
+        with (
+            patch("backend.geocoding._load_cache", return_value={}),
+            patch.object(client, "_get_client") as mock_get_client,
+        ):
             mock_response = MagicMock()
             mock_response.json.return_value = []  # Empty results
             mock_response.raise_for_status = MagicMock()
@@ -131,9 +134,11 @@ class TestGeocode:
             }
         ]
 
-        with patch("backend.geocoding._load_cache", return_value={}), patch(
-            "backend.geocoding._save_cache"
-        ), patch.object(client, "_get_client") as mock_get_client:
+        with (
+            patch("backend.geocoding._load_cache", return_value={}),
+            patch("backend.geocoding._save_cache"),
+            patch.object(client, "_get_client") as mock_get_client,
+        ):
             mock_response = MagicMock()
             mock_response.json.return_value = api_response
             mock_response.raise_for_status = MagicMock()
@@ -220,9 +225,10 @@ class TestGeocodingErrorHandling:
 
         client = GeocodingClient()
 
-        with patch("backend.geocoding._load_cache", return_value={}), patch.object(
-            client, "_get_client"
-        ) as mock_get_client:
+        with (
+            patch("backend.geocoding._load_cache", return_value={}),
+            patch.object(client, "_get_client") as mock_get_client,
+        ):
             mock_http = AsyncMock()
             mock_http.get = AsyncMock(side_effect=httpx.TimeoutException("timeout"))
             mock_get_client.return_value = mock_http
@@ -239,9 +245,10 @@ class TestGeocodingErrorHandling:
 
         client = GeocodingClient()
 
-        with patch("backend.geocoding._load_cache", return_value={}), patch.object(
-            client, "_get_client"
-        ) as mock_get_client:
+        with (
+            patch("backend.geocoding._load_cache", return_value={}),
+            patch.object(client, "_get_client") as mock_get_client,
+        ):
             mock_http = AsyncMock()
             mock_http.get = AsyncMock(side_effect=httpx.ConnectError("failed"))
             mock_get_client.return_value = mock_http
@@ -258,9 +265,10 @@ class TestGeocodingErrorHandling:
 
         client = GeocodingClient()
 
-        with patch("backend.geocoding._load_cache", return_value={}), patch.object(
-            client, "_get_client"
-        ) as mock_get_client:
+        with (
+            patch("backend.geocoding._load_cache", return_value={}),
+            patch.object(client, "_get_client") as mock_get_client,
+        ):
             mock_http = AsyncMock()
             mock_http.get = AsyncMock(side_effect=httpx.RequestError("unknown"))
             mock_get_client.return_value = mock_http

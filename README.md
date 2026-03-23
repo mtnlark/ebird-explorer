@@ -41,6 +41,29 @@ I'm a birder who wanted a way to quickly answer common questions like "what's be
 
 The app is configured for deployment on Vercel. Push to your repo and connect it to Vercel, making sure to set the `EBIRD_API_KEY` environment variable.
 
+## Development
+
+Install dev dependencies:
+```bash
+pip install -e ".[dev]"
+```
+
+Run tests:
+```bash
+pytest tests/ -v
+```
+
+Run tests with coverage:
+```bash
+pytest tests/ --cov=backend --cov-report=html
+```
+
+Lint and format:
+```bash
+ruff check backend/ tests/
+ruff format backend/ tests/
+```
+
 ### Screenshots
 
 Recent sightings in Charleston, SC:
