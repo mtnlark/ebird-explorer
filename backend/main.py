@@ -15,6 +15,7 @@ from fastapi.templating import Jinja2Templates
 from .config import settings
 from .ebird_client import ebird
 from .geocoding import GeocodingError, close_geocoding_client, geocode
+from .models import Observation
 
 # Configure logging
 logging.basicConfig(
@@ -360,6 +361,91 @@ async def api_species(q: str = Query(default="", min_length=0)):
             if len(matches) >= 10:
                 break
     return matches
+
+
+def compute_whats_new(
+    current: list[Observation],
+    extended: list[Observation],
+) -> dict[str, list[Observation]]:
+    """Compute species arrivals and departures between two time periods.
+
+    Args:
+        current: Observations from the current period (e.g., last 7 days)
+        extended: Observations from the extended period (e.g., last 14 days)
+
+    Returns:
+        Dict with 'arrivals' (species in current) and 'departures'
+        (species in extended but not current).
+    """
+    current_codes = {obs.species_code for obs in current}
+    arrivals = list(current)
+    departures = [obs for obs in extended if obs.species_code not in current_codes]
+    return {"arrivals": arrivals, "departures": departures}
+
+
+@app.get("/whats-new", response_class=HTMLResponse)
+async def whats_new(
+    request: Request,
+    location: str = Query(..., min_length=1),
+    radius: int = Query(default=10, ge=1, le=31),
+    period: int = Query(default=7, ge=1, le=30),
+):
+    """Show species that have arrived or departed compared to the previous period."""
+    logger.info(f"What's new request: '{location}' ({radius}mi, {period}d period)")
+
+    try:
+        geo = await geocode(location)
+    except GeocodingError as e:
+        return templates.TemplateResponse(
+            request,
+            "whats_new.html",
+            {"error": str(e), "location": location},
+        )
+
+    if not geo:
+        return templates.TemplateResponse(
+            request,
+            "whats_new.html",
+            {"error": f"Could not find location: {location}", "location": location},
+        )
+
+    extended_period = min(period * 2, 30)
+    dist_km = miles_to_km(radius)
+
+    try:
+        current_obs, extended_obs = await asyncio.gather(
+            ebird.get_recent_observations(lat=geo.lat, lng=geo.lng, dist_km=dist_km, back=period),
+            ebird.get_recent_observations(lat=geo.lat, lng=geo.lng, dist_km=dist_km, back=extended_period),
+        )
+    except Exception as e:
+        logger.error(f"eBird API error for what's new '{location}': {e}")
+        return templates.TemplateResponse(
+            request,
+            "whats_new.html",
+            {"error": f"eBird API error: {str(e)}", "location": location},
+        )
+
+    diff = compute_whats_new(current_obs, extended_obs)
+
+    arrivals_dicts = [obs.model_dump(by_alias=True) for obs in diff["arrivals"]]
+    departures_dicts = [obs.model_dump(by_alias=True) for obs in diff["departures"]]
+    add_formatted_dates(arrivals_dicts)
+    add_formatted_dates(departures_dicts)
+
+    return templates.TemplateResponse(
+        request,
+        "whats_new.html",
+        {
+            "location": location,
+            "display_name": geo.display_name,
+            "radius": radius,
+            "period": period,
+            "arrivals": arrivals_dicts,
+            "departures": departures_dicts,
+            "arrival_count": len(diff["arrivals"]),
+            "departure_count": len(diff["departures"]),
+        },
+    )
 
 
 @app.get("/species", response_class=HTMLResponse)

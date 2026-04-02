@@ -616,6 +616,40 @@ button[type="submit"]:active {
     padding-left: 2rem !important;
 }
 
+/* What's New sections */
+.whats-new-section {
+    margin-bottom: 2rem;
+}
+
+.section-heading {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.section-count {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.section-desc {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    margin-bottom: 1rem;
+}
+
+.departures-heading {
+    color: #9a3412;
+}
+
+.arrivals-heading {
+    color: var(--color-primary);
+}
+
 .species-form .search-form {
     max-width: 500px;
 }
