@@ -743,7 +743,7 @@ button[type="submit"].loading {
 
     .observations-table th,
     .observations-table td {
-        padding: 0.5rem;
+        padding: 0.5rem 0.35rem;
     }
 
     .search-row {
@@ -759,5 +759,30 @@ button[type="submit"].loading {
 
     .search-near {
         display: none;
+    }
+
+    .tabs {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .tab {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+        flex: 1 1 auto;
+        text-align: center;
+    }
+
+    .section-heading {
+        flex-wrap: wrap;
+        font-size: 1.05rem;
+    }
+
+    .section-count {
+        width: 100%;
+    }
+
+    .location {
+        max-width: 150px;
     }
 }
