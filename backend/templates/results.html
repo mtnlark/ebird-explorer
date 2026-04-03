@@ -19,6 +19,8 @@
                    class="tab {% if notable %}active{% endif %}">Notable</a>
                 <a href="/hotspots?location={{ location|urlencode }}&radius={{ radius }}"
                    class="tab">Hotspots</a>
+                <a href="/whats-new?location={{ location|urlencode }}&radius={{ radius }}&period={{ days }}"
+                   class="tab">What's New</a>
             </div>
 
             <h2>{% if notable %}Notable{% else %}Recent{% endif %} sightings near {{ location }}</h2>
